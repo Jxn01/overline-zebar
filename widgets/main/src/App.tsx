@@ -40,9 +40,9 @@ function App() {
         <Media media={output.media} />
       </div>
 
-      {/* Centre island: time · date · weather */}
+      {/* Centre island: time · date · weather (larger font) */}
       <div className="absolute left-1/2 -translate-x-1/2 h-full flex items-center">
-        <Chip className="gap-3">
+        <Chip className="gap-3 text-lg">
           <TimeDisplay dateOutput={output.date} />
           <Weather weather={output.weather} />
         </Chip>

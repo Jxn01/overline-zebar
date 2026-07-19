@@ -35,6 +35,10 @@
           {
             "program": "shutdown",
             "argsRegex": ".*"
+          },
+          {
+            "program": "explorer",
+            "argsRegex": ".*"
           }
         ]
       },

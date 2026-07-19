@@ -1,3 +1,4 @@
+import * as zebar from 'zebar';
 import { NetworkOutput } from 'zebar';
 import { Cable, Unplug, Wifi } from 'lucide-react';
 
@@ -9,7 +10,8 @@ interface NetworkProps {
 // Network system indicator (GNOME-style). Windows renders network as a shell
 // element that a tray-spy cannot capture, so we surface it from Zebar's own
 // `network` provider instead. Ethernet -> cable, Wi-Fi -> wifi (+ SSID
-// tooltip), nothing -> unplugged.
+// tooltip), nothing -> unplugged. Click opens Windows network settings
+// (needs `explorer` in the widget's zpack shellCommands privileges).
 export default function Network({
   network,
   iconClassnames = 'h-3.5 w-3.5 text-icon',
@@ -33,9 +35,17 @@ export default function Network({
     }
   }
 
+  const openNetworkSettings = () => {
+    zebar.shellSpawn('explorer', ['ms-settings:network-status']).catch(() => {});
+  };
+
   return (
-    <div className="flex items-center h-full" title={label}>
+    <button
+      className="flex items-center h-full outline-none"
+      title={`${label} — click for network settings`}
+      onClick={openNetworkSettings}
+    >
       <Icon className={iconClassnames} />
-    </div>
+    </button>
   );
 }
