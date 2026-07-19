@@ -33,24 +33,26 @@ function App() {
 
   const iconClassnames = 'h-3.5 w-3.5 text-icon';
 
-  // Clicking the centre island opens the calendar panel (which also shows the
-  // weather summary), anchored just below the bar, horizontally centred.
-  const openCalendar = async () => {
+  // Panels open just below the bar, horizontally centred. Clicking the
+  // time/date opens the calendar; clicking the weather opens the 7-day forecast.
+  const openPanel = async (widget: string, width: string, height: string) => {
     const windowSize = await zebar.currentWidget().tauriWindow.outerSize();
     await zebar.startWidget(
-      'calendar',
+      widget,
       {
         anchor: 'top_center',
         offsetX: '0px',
         offsetY: `${windowSize.height + 6}px`,
-        width: '300px',
-        height: '420px',
+        width,
+        height,
         monitorSelection: { type: 'primary' },
         dockToEdge: { enabled: false, edge: 'top', windowMargin: `${windowSize.height}px` },
       },
       {}
     );
   };
+  const openCalendar = () => openPanel('calendar', '300px', '420px');
+  const openForecast = () => openPanel('forecast', '260px', '290px');
 
   return (
     <div className="relative flex justify-between items-center h-screen px-2 py-1 text-text antialiased select-none font-mono">
@@ -63,13 +65,21 @@ function App() {
           inset-y-0 + py-1 matches the bar's own py-1 so this absolutely-
           positioned island is the SAME height as the in-flow side islands. */}
       <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 py-1 flex items-center">
-        <Chip
-          as="button"
-          className="gap-3 text-base cursor-pointer"
-          onClick={openCalendar}
-        >
-          <TimeDisplay dateOutput={output.date} />
-          <Weather weather={output.weather} />
+        <Chip className="gap-3 text-base">
+          <button
+            onClick={openCalendar}
+            title="Open calendar"
+            className="h-full flex items-center outline-none cursor-pointer"
+          >
+            <TimeDisplay dateOutput={output.date} />
+          </button>
+          <button
+            onClick={openForecast}
+            title="7-day forecast"
+            className="h-full flex items-center outline-none cursor-pointer"
+          >
+            <Weather weather={output.weather} />
+          </button>
         </Chip>
       </div>
 
