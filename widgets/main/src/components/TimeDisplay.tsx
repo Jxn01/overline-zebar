@@ -5,78 +5,36 @@ interface TimeDisplayProps {
   dateOutput: DateOutput | null;
 }
 
+// Single-line clock: "HH:mm:ss  yyyy.mm.dd", for the centre island.
+// Re-renders on each date-provider tick (dateOutput changes).
 export function TimeDisplay({ dateOutput }: TimeDisplayProps) {
-  const [timeFormat] = useWidgetSetting('main', 'timeFormat');
   const [timeLocale] = useWidgetSetting('main', 'timeLocale');
+  const locale = timeLocale || 'en-GB';
 
-  // Ensure we have valid values (useWidgetSetting might return undefined initially)
-  const safeTimeFormat = timeFormat || 'EEE d MMM t';
-  const safeTimeLocale = timeLocale || 'en-GB';
+  void dateOutput;
+  const now = new Date();
 
-  // If custom settings are configured, format manually with configured locale
-  // Otherwise use provider output
-  const isCustomConfigured =
-    safeTimeFormat !== 'EEE d MMM t' || safeTimeLocale !== 'en-GB';
-
-  if (isCustomConfigured) {
-    // Parse ICU format string to Intl.DateTimeFormat options
-    let formatOptions: Intl.DateTimeFormatOptions = {
-      hour: 'numeric',
-      minute: 'numeric',
-    };
-
-    // Add date components based on format string
-    if (safeTimeFormat.includes('E')) formatOptions.weekday = 'short';
-    if (safeTimeFormat.includes('d')) formatOptions.day = 'numeric';
-    if (safeTimeFormat.includes('M')) formatOptions.month = 'short';
-    if (safeTimeFormat.includes('y')) formatOptions.year = 'numeric';
-    if (safeTimeFormat.includes('s')) formatOptions.second = 'numeric';
-
-    // Check for 12-hour format (h = 12-hour, a = AM/PM marker)
-    if (safeTimeFormat.includes('h') || safeTimeFormat.includes('a')) {
-      formatOptions.hour12 = true;
-    }
-
-    try {
-      return (
-        <div className="h-full flex items-center justify-center px-1">
-          {new Intl.DateTimeFormat(safeTimeLocale, formatOptions)
-            .format(new Date())
-            .replace(/,/g, '')}
-        </div>
-      );
-    } catch (e) {
-      // Fallback if format parsing fails - use safe defaults
-      try {
-        return (
-          <div className="h-full flex items-center justify-center px-1">
-            {new Date().toLocaleTimeString(safeTimeLocale)}
-          </div>
-        );
-      } catch (fallbackError) {
-        // Ultimate fallback - no locale
-        return (
-          <div className="h-full flex items-center justify-center px-1">
-            {new Date().toLocaleTimeString()}
-          </div>
-        );
-      }
-    }
+  let time: string;
+  try {
+    time = new Intl.DateTimeFormat(locale, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(now);
+  } catch {
+    time = now.toLocaleTimeString();
   }
 
-  // Use default provider output
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const date = `${yyyy}.${mm}.${dd}`;
+
   return (
-    <div className="h-full flex items-center justify-center px-1">
-      {dateOutput?.formatted ??
-        new Intl.DateTimeFormat('en-GB', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-          hour: 'numeric',
-          minute: 'numeric',
-        })
-          .format(new Date())
-          .replace(/,/g, '')}
+    <div className="h-full flex items-center justify-center gap-2 tabular-nums">
+      <span className="font-semibold">{time}</span>
+      <span className="text-text-muted">{date}</span>
     </div>
   );
 }

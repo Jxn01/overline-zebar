@@ -45,26 +45,12 @@ export default function Systray({ systray }: SystrayProps) {
 
   const [pinnedSystrayIcons] = useWidgetSetting('main', 'pinnedSystrayIcons');
 
-  // Determine the actual pinned icons that are present in the systray
-  const presentPinnedIcons = icons.filter((icon) =>
-    pinnedSystrayIcons.includes(icon.iconHash)
-  );
-  const presentPinnedIconsCount = presentPinnedIcons.length;
-
-  // Set a default of 4 visible icons, but expand if there are more pinned icons.
-  const visibleCount = Math.max(4, presentPinnedIconsCount);
-
+  // Show ALL captured tray icons (no carousel clipping), per user request —
+  // a complete, GNOME-style tray. Zebar captures every icon (incl. Windows
+  // overflow); overline previously capped the visible count at 4.
   const arrangedIcons = arrangeIconsWithPinnedCenter(pinnedSystrayIcons, icons);
-
-  const unpinnedCount = icons.length - presentPinnedIconsCount;
-  const firstPinnedIndex = Math.ceil(unpinnedCount / 2);
-
-  let startIndex;
-  if (presentPinnedIconsCount > 0) {
-    startIndex = Math.floor(
-      firstPinnedIndex - (visibleCount - presentPinnedIconsCount) / 2
-    );
-  }
+  const visibleCount = Math.max(4, icons.length);
+  const startIndex = 0;
 
   const systrayIcons = arrangedIcons.map((item) => (
     <SystrayItem key={item.id} systray={systray} icon={item} />
