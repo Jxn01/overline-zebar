@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Scale the whole bar up a touch (icons + text are rem-based, so this grows
+   everything proportionally) to fill the taller 46px islands. Default is 16px. */
+html {
+  font-size: 18px;
+}
