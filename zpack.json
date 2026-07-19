@@ -188,6 +188,45 @@
           }
         }
       ]
+    },
+    {
+      "name": "calendar",
+      "htmlPath": "./widgets/calendar/dist/index.html",
+      "zOrder": "normal",
+      "shownInTaskbar": false,
+      "focused": true,
+      "resizable": false,
+      "transparent": true,
+      "includeFiles": [
+        "widgets/calendar/dist/index.html",
+        "widgets/calendar/dist/assets/**",
+        "widgets/calendar/dist/geistMono/**"
+      ],
+      "caching": {
+        "defaultDuration": 604800,
+        "rules": []
+      },
+      "privileges": {
+        "shellCommands": []
+      },
+      "presets": [
+        {
+          "name": "default",
+          "anchor": "top_center",
+          "offsetX": "0px",
+          "offsetY": "54px",
+          "width": "300px",
+          "height": "420px",
+          "monitorSelection": {
+            "type": "primary"
+          },
+          "dockToEdge": {
+            "enabled": false,
+            "edge": null,
+            "windowMargin": "0px"
+          }
+        }
+      ]
     }
   ]
 }

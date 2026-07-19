@@ -33,6 +33,25 @@ function App() {
 
   const iconClassnames = 'h-3.5 w-3.5 text-icon';
 
+  // Clicking the centre island opens the calendar panel (which also shows the
+  // weather summary), anchored just below the bar, horizontally centred.
+  const openCalendar = async () => {
+    const windowSize = await zebar.currentWidget().tauriWindow.outerSize();
+    await zebar.startWidget(
+      'calendar',
+      {
+        anchor: 'top_center',
+        offsetX: '0px',
+        offsetY: `${windowSize.height + 6}px`,
+        width: '300px',
+        height: '420px',
+        monitorSelection: { type: 'primary' },
+        dockToEdge: { enabled: false, edge: 'top', windowMargin: `${windowSize.height}px` },
+      },
+      {}
+    );
+  };
+
   return (
     <div className="relative flex justify-between items-center h-screen px-2 py-1 text-text antialiased select-none font-mono">
       {/* Left island: media */}
@@ -40,9 +59,15 @@ function App() {
         <Media media={output.media} />
       </div>
 
-      {/* Centre island: time · date · weather (larger font) */}
-      <div className="absolute left-1/2 -translate-x-1/2 h-full flex items-center">
-        <Chip className="gap-3 text-lg">
+      {/* Centre island: time · date · weather. Click -> calendar.
+          inset-y-0 + py-1 matches the bar's own py-1 so this absolutely-
+          positioned island is the SAME height as the in-flow side islands. */}
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 py-1 flex items-center">
+        <Chip
+          as="button"
+          className="gap-3 text-base cursor-pointer"
+          onClick={openCalendar}
+        >
           <TimeDisplay dateOutput={output.date} />
           <Weather weather={output.weather} />
         </Chip>
