@@ -83,11 +83,11 @@ function App() {
         </Chip>
       </div>
 
-      {/* Right island: network · volume · systray */}
+      {/* Right island: volume · network · systray */}
       <div className="flex items-center h-full z-10">
         <Chip className="gap-2.5">
-          <Network network={output.network} iconClassnames={iconClassnames} />
           <VolumeControl audio={output.audio} iconClassnames={iconClassnames} />
+          <Network network={output.network} iconClassnames={iconClassnames} />
           <Systray systray={output.systray} />
         </Chip>
       </div>
