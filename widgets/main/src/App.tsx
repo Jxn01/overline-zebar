@@ -15,10 +15,11 @@ import Weather from './components/weather';
 //   left   = media
 //   centre = time · date · weather (one line -> thin bar)
 //   right  = network · volume · systray
+// No `date` provider: TimeDisplay drives its own 1s tick, so a date provider
+// here would only re-render the whole bar every second for nothing.
 const providers = zebar.createProviderGroup({
   media: { type: 'media' },
   network: { type: 'network' },
-  date: { type: 'date', formatting: 'EEE d MMM t', locale: 'en-GB' },
   weather: { type: 'weather' },
   audio: { type: 'audio' },
   systray: { type: 'systray' },
@@ -71,7 +72,7 @@ function App() {
             title="Open calendar"
             className="h-full flex items-center outline-none cursor-pointer"
           >
-            <TimeDisplay dateOutput={output.date} />
+            <TimeDisplay />
           </button>
           <button
             onClick={openForecast}

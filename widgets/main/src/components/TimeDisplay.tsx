@@ -1,18 +1,24 @@
+import { useEffect, useState } from 'react';
 import { useWidgetSetting } from '@overline-zebar/config';
-import { DateOutput } from 'zebar';
-
-interface TimeDisplayProps {
-  dateOutput: DateOutput | null;
-}
 
 // Single-line clock: "HH:mm:ss  yyyy.mm.dd", for the centre island.
-// Re-renders on each date-provider tick (dateOutput changes).
-export function TimeDisplay({ dateOutput }: TimeDisplayProps) {
+//
+// This drives its OWN tick with an interval rather than relying on the zebar
+// `date` provider. Why: the rendered output is derived from `new Date()`, not
+// from a prop, so the React Compiler saw no reactive dependency and memoised
+// the component permanently — the clock froze at its first render. Holding the
+// current time in state gives the compiler a real dependency (a new Date object
+// each second is a new reference), so it re-renders reliably.
+export function TimeDisplay() {
   const [timeLocale] = useWidgetSetting('main', 'timeLocale');
   const locale = timeLocale || 'en-GB';
 
-  void dateOutput;
-  const now = new Date();
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   let time: string;
   try {
