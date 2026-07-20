@@ -17,6 +17,7 @@ interface Sample {
   gpu: number;
   cpuTemp: number;
   gpuTemp: number;
+  disk: number;
   up: number;
   down: number;
 }
@@ -29,6 +30,9 @@ const SERIES: { key: SeriesKey; label: string; unit: string; max?: number }[] = 
   { key: 'gpu', label: 'GPU', unit: '%', max: 100 },
   { key: 'gpuTemp', label: 'GPU temp', unit: '°C' },
   { key: 'ram', label: 'RAM', unit: '%', max: 100 },
+  // Disk is capacity, not activity, so this line is near-flat over 5 minutes.
+  // It is here for completeness and to catch something filling the drive.
+  { key: 'disk', label: 'Disk', unit: '%', max: 100 },
   { key: 'down', label: 'Net down', unit: '' },
   { key: 'up', label: 'Net up', unit: '' },
 ];

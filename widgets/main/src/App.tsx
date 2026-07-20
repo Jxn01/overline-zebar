@@ -3,7 +3,7 @@ import * as zebar from 'zebar';
 import { Chip } from '@overline-zebar/ui';
 import { Power } from 'lucide-react';
 import { useLhmSensors } from './hooks/useLhmSensors';
-import Stats from './components/stats';
+import Stats, { diskUsedPct } from './components/stats';
 import Media from './components/media';
 import Network from './components/network';
 import Systray from './components/systray';
@@ -30,6 +30,7 @@ const providers = zebar.createProviderGroup({
   host: { type: 'host' },
   cpu: { type: 'cpu' },
   memory: { type: 'memory' },
+  disk: { type: 'disk' },
 });
 
 // Rolling 5-minute history for the stats graph panel. The bar is the only
@@ -50,13 +51,14 @@ function App() {
 
   // Keep the newest readings in a ref so the sampler interval below never
   // closes over stale values.
-  const latest = useRef({ cpu: 0, ram: 0, gpu: 0, cpuTemp: 0, gpuTemp: 0, up: 0, down: 0 });
+  const latest = useRef({ cpu: 0, ram: 0, gpu: 0, cpuTemp: 0, gpuTemp: 0, disk: 0, up: 0, down: 0 });
   latest.current = {
     cpu: output.cpu?.usage ?? 0,
     ram: output.memory?.usage ?? 0,
     gpu: lhm.gpuLoad ?? 0,
     cpuTemp: lhm.cpuTemp ?? 0,
     gpuTemp: lhm.gpuTemp ?? 0,
+    disk: diskUsedPct(output.disk) ?? 0,
     up: output.network?.traffic?.transmitted?.bytes ?? 0,
     down: output.network?.traffic?.received?.bytes ?? 0,
   };
@@ -127,6 +129,7 @@ function App() {
             cpu={output.cpu}
             memory={output.memory}
             network={output.network}
+            disk={output.disk}
             lhm={lhm}
           />
         </Chip>
