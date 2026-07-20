@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import * as zebar from 'zebar';
 import { Chip } from '@overline-zebar/ui';
+import { Power } from 'lucide-react';
 import Media from './components/media';
 import Network from './components/network';
 import Systray from './components/systray';
 import { TimeDisplay } from './components/TimeDisplay';
+import Uptime from './components/uptime';
 import VolumeControl from './components/volume';
 import Weather from './components/weather';
 
@@ -23,6 +25,7 @@ const providers = zebar.createProviderGroup({
   weather: { type: 'weather' },
   audio: { type: 'audio' },
   systray: { type: 'systray' },
+  host: { type: 'host' },
 });
 
 function App() {
@@ -36,13 +39,19 @@ function App() {
 
   // Panels open just below the bar, horizontally centred. Clicking the
   // time/date opens the calendar; clicking the weather opens the 7-day forecast.
-  const openPanel = async (widget: string, width: string, height: string) => {
+  const openPanel = async (
+    widget: string,
+    width: string,
+    height: string,
+    anchor: 'top_center' | 'top_right' = 'top_center',
+    offsetX = '0px'
+  ) => {
     const windowSize = await zebar.currentWidget().tauriWindow.outerSize();
     await zebar.startWidget(
       widget,
       {
-        anchor: 'top_center',
-        offsetX: '0px',
+        anchor,
+        offsetX,
         offsetY: `${windowSize.height + 6}px`,
         width,
         height,
@@ -54,6 +63,8 @@ function App() {
   };
   const openCalendar = () => openPanel('calendar', '300px', '420px');
   const openForecast = () => openPanel('forecast', '260px', '290px');
+  // Power menu is anchored right, under the power island.
+  const openPower = () => openPanel('power', '220px', '250px', 'top_right', '-8px');
 
   return (
     <div className="relative flex justify-between items-center h-screen px-2 py-1 text-text antialiased select-none font-mono">
@@ -84,12 +95,28 @@ function App() {
         </Chip>
       </div>
 
-      {/* Right island: volume · network · systray */}
-      <div className="flex items-center h-full z-10">
-        <Chip className="gap-2.5">
+      {/* Right: four separate islands — uptime | volume | network+systray | power */}
+      <div className="flex items-center h-full z-10 gap-2">
+        <Chip>
+          <Uptime host={output.host} />
+        </Chip>
+
+        <Chip>
           <VolumeControl audio={output.audio} iconClassnames={iconClassnames} />
+        </Chip>
+
+        <Chip className="gap-2.5">
           <Network network={output.network} iconClassnames={iconClassnames} />
           <Systray systray={output.systray} />
+        </Chip>
+
+        <Chip
+          as="button"
+          onClick={openPower}
+          title="Power"
+          className="cursor-pointer"
+        >
+          <Power className="h-3.5 w-3.5 text-icon" />
         </Chip>
       </div>
     </div>

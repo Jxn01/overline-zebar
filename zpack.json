@@ -266,6 +266,54 @@
           }
         }
       ]
+    },
+    {
+      "name": "power",
+      "htmlPath": "./widgets/power/dist/index.html",
+      "zOrder": "normal",
+      "shownInTaskbar": false,
+      "focused": true,
+      "resizable": false,
+      "transparent": true,
+      "includeFiles": [
+        "widgets/power/dist/index.html",
+        "widgets/power/dist/assets/**",
+        "widgets/power/dist/geistMono/**"
+      ],
+      "caching": {
+        "defaultDuration": 604800,
+        "rules": []
+      },
+      "privileges": {
+        "shellCommands": [
+          {
+            "program": "shutdown",
+            "argsRegex": ".*"
+          },
+          {
+            "program": "rundll32",
+            "argsRegex": ".*"
+          }
+        ]
+      },
+      "presets": [
+        {
+          "name": "default",
+          "anchor": "top_right",
+          "offsetX": "-8px",
+          "offsetY": "54px",
+          "width": "220px",
+          "height": "250px",
+          "monitorSelection": {
+            "type": "primary"
+          },
+          "dockToEdge": {
+            "enabled": false,
+            "edge": null,
+            "windowMargin": "0px"
+          }
+        }
+      ]
     }
   ]
 }
