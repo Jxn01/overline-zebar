@@ -28,7 +28,12 @@
       ],
       "caching": {
         "defaultDuration": 604800,
-        "rules": []
+        "rules": [
+          {
+            "urlRegex": ".*localhost:8085.*",
+            "duration": 0
+          }
+        ]
       },
       "privileges": {
         "shellCommands": [
@@ -243,7 +248,12 @@
       ],
       "caching": {
         "defaultDuration": 604800,
-        "rules": []
+        "rules": [
+          {
+            "urlRegex": ".*(open-meteo|ipapi)..*",
+            "duration": 0
+          }
+        ]
       },
       "privileges": {
         "shellCommands": []
@@ -304,6 +314,45 @@
           "offsetY": "54px",
           "width": "220px",
           "height": "250px",
+          "monitorSelection": {
+            "type": "primary"
+          },
+          "dockToEdge": {
+            "enabled": false,
+            "edge": null,
+            "windowMargin": "0px"
+          }
+        }
+      ]
+    },
+    {
+      "name": "stats-graph",
+      "htmlPath": "./widgets/stats-graph/dist/index.html",
+      "zOrder": "normal",
+      "shownInTaskbar": false,
+      "focused": true,
+      "resizable": false,
+      "transparent": true,
+      "includeFiles": [
+        "widgets/stats-graph/dist/index.html",
+        "widgets/stats-graph/dist/assets/**",
+        "widgets/stats-graph/dist/geistMono/**"
+      ],
+      "caching": {
+        "defaultDuration": 604800,
+        "rules": []
+      },
+      "privileges": {
+        "shellCommands": []
+      },
+      "presets": [
+        {
+          "name": "default",
+          "anchor": "top_left",
+          "offsetX": "8px",
+          "offsetY": "54px",
+          "width": "420px",
+          "height": "360px",
           "monitorSelection": {
             "type": "primary"
           },

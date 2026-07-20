@@ -54,8 +54,13 @@ function App() {
       let lat = 47.4984;
       let lon = 19.0404;
       let name = 'Budapest';
+      // Cache-bust every request: Zebar's service worker caches with a 7-day
+      // default, which would otherwise serve a stale forecast on every reopen.
+      const noCache: RequestInit = { cache: 'no-store' };
       try {
-        const g = await (await fetch('https://ipapi.co/json/')).json();
+        const g = await (
+          await fetch(`https://ipapi.co/json/?_=${Date.now()}`, noCache)
+        ).json();
         if (g.latitude && g.longitude) {
           lat = g.latitude;
           lon = g.longitude;
@@ -68,8 +73,9 @@ function App() {
       try {
         const url =
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-          `&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7`;
-        const f = await (await fetch(url)).json();
+          `&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=7` +
+          `&_=${Date.now()}`;
+        const f = await (await fetch(url, noCache)).json();
         if (!f.daily) throw new Error('no data');
         setDays(
           f.daily.time.map((t: string, i: number) => ({

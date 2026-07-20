@@ -18,22 +18,26 @@ export default function Network({
 }: NetworkProps) {
   if (!network) return null;
 
-  const connected = !!network.defaultInterface;
+  // NOTE: type lives on defaultInterface, NOT on NetworkOutput itself.
+  // Reading network.type gave undefined and always fell through to "Connected".
+  const iface = network.defaultInterface;
+  const connected = !!iface;
   let Icon = Unplug;
   let label = 'Disconnected';
 
-  if (connected) {
-    if (network.type === 'wifi') {
+  if (iface) {
+    if (iface.type === 'wifi') {
       Icon = Wifi;
-      label = network.ssid ? `Wi-Fi: ${network.ssid}` : 'Wi-Fi';
-    } else if (network.type === 'ethernet') {
+      label = iface.friendlyName ? `Wi-Fi: ${iface.friendlyName}` : 'Wi-Fi';
+    } else if (iface.type === 'ethernet') {
       Icon = Cable;
-      label = 'Ethernet';
+      label = iface.friendlyName ?? 'Ethernet';
     } else {
       Icon = Cable;
-      label = 'Connected';
+      label = iface.friendlyName ?? 'Connected';
     }
   }
+  void connected;
 
   const openNetworkSettings = () => {
     zebar.shellSpawn('explorer', ['ms-settings:network-status']).catch(() => {});

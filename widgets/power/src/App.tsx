@@ -30,8 +30,11 @@ const ACTIONS: Action[] = [
     confirm: false,
   },
   {
+    // Labelled honestly: hibernation is enabled on this machine, so Windows
+    // will hibernate rather than sleep. `powercfg /h off` would force true
+    // sleep but also disables Fast Startup — deliberately not done.
     id: 'sleep',
-    label: 'Sleep',
+    label: 'Sleep / Hibernate',
     Icon: Moon,
     program: 'rundll32',
     args: ['powrprof.dll,SetSuspendState', '0,1,0'],

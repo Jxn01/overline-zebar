@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as zebar from 'zebar';
 import { Chip } from '@overline-zebar/ui';
 import { Power } from 'lucide-react';
+import { useLhmSensors } from './hooks/useLhmSensors';
+import Stats from './components/stats';
 import Media from './components/media';
 import Network from './components/network';
 import Systray from './components/systray';
@@ -26,13 +28,55 @@ const providers = zebar.createProviderGroup({
   audio: { type: 'audio' },
   systray: { type: 'systray' },
   host: { type: 'host' },
+  cpu: { type: 'cpu' },
+  memory: { type: 'memory' },
 });
+
+// Rolling 5-minute history for the stats graph panel. The bar is the only
+// always-running widget, so it does the sampling; the panel just reads this.
+// Shared via localStorage, which is same-origin across widgets (the theme
+// config already relies on that).
+const HISTORY_KEY = 'overline-stats-history';
+const HISTORY_WINDOW_MS = 5 * 60 * 1000;
+const SAMPLE_MS = 3000;
 
 function App() {
   const [output, setOutput] = useState(providers.outputMap);
+  const lhm = useLhmSensors(SAMPLE_MS);
 
   useEffect(() => {
     providers.onOutput(() => setOutput(providers.outputMap));
+  }, []);
+
+  // Keep the newest readings in a ref so the sampler interval below never
+  // closes over stale values.
+  const latest = useRef({ cpu: 0, ram: 0, gpu: 0, cpuTemp: 0, gpuTemp: 0, up: 0, down: 0 });
+  latest.current = {
+    cpu: output.cpu?.usage ?? 0,
+    ram: output.memory?.usage ?? 0,
+    gpu: lhm.gpuLoad ?? 0,
+    cpuTemp: lhm.cpuTemp ?? 0,
+    gpuTemp: lhm.gpuTemp ?? 0,
+    up: output.network?.traffic?.transmitted?.bytes ?? 0,
+    down: output.network?.traffic?.received?.bytes ?? 0,
+  };
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        const hist: Array<Record<string, number>> = raw ? JSON.parse(raw) : [];
+        hist.push({ t: Date.now(), ...latest.current });
+        const cutoff = Date.now() - HISTORY_WINDOW_MS;
+        localStorage.setItem(
+          HISTORY_KEY,
+          JSON.stringify(hist.filter((h) => h.t >= cutoff))
+        );
+      } catch {
+        /* history is best-effort */
+      }
+    }, SAMPLE_MS);
+    return () => clearInterval(id);
   }, []);
 
   const iconClassnames = 'h-3.5 w-3.5 text-icon';
@@ -43,7 +87,7 @@ function App() {
     widget: string,
     width: string,
     height: string,
-    anchor: 'top_center' | 'top_right' = 'top_center',
+    anchor: 'top_center' | 'top_right' | 'top_left' = 'top_center',
     offsetX = '0px'
   ) => {
     const windowSize = await zebar.currentWidget().tauriWindow.outerSize();
@@ -65,11 +109,27 @@ function App() {
   const openForecast = () => openPanel('forecast', '260px', '290px');
   // Power menu is anchored right, under the power island.
   const openPower = () => openPanel('power', '220px', '250px', 'top_right', '-8px');
+  // Stats graphs are anchored left, under the stats island.
+  const openStatsGraph = () =>
+    openPanel('stats-graph', '420px', '360px', 'top_left', '8px');
 
   return (
     <div className="relative flex justify-between items-center h-screen px-2 py-1 text-text antialiased select-none font-mono">
-      {/* Left island: media */}
-      <div className="flex items-center h-full z-10">
+      {/* Left: stats island (always present) then media when something plays */}
+      <div className="flex items-center h-full z-10 gap-2">
+        <Chip
+          as="button"
+          onClick={openStatsGraph}
+          title="System stats - click for 5 minute graphs"
+          className="cursor-pointer"
+        >
+          <Stats
+            cpu={output.cpu}
+            memory={output.memory}
+            network={output.network}
+            lhm={lhm}
+          />
+        </Chip>
         <Media media={output.media} />
       </div>
 
