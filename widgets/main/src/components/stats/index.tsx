@@ -5,8 +5,8 @@ import {
   Cpu,
   HardDrive,
   MemoryStick,
-  Microchip,
 } from 'lucide-react';
+import { GpuIcon } from '../icons/GpuIcon';
 import { LhmSensors } from '../../hooks/useLhmSensors';
 
 interface StatsProps {
@@ -63,13 +63,13 @@ function pct(v: number | null | undefined) {
 }
 
 function temp(v: number | null | undefined) {
-  return v === null || v === undefined ? '--' : `${Math.round(v)}°`;
+  return v === null || v === undefined ? '--' : `${Math.round(v)}°C`;
 }
 
 // One always-present island:
 //   CPU% temp · GPU% temp · RAM% · disk% + TB · net up · net down
-// Icons instead of text labels. There is no GPU glyph in lucide, so the GPU
-// uses Microchip alongside the CPU's Cpu glyph; tooltips disambiguate.
+// Icons instead of text labels. The GPU uses the official lucide 'gpu' glyph,
+// inlined locally because this repo pins a lucide version that predates it.
 export default function Stats({
   cpu,
   memory,
@@ -97,7 +97,7 @@ export default function Stats({
         className="flex items-center gap-1.5"
         title={`NVIDIA GPU usage and temperature${tempHint}`}
       >
-        <Microchip className={icon} />
+        <GpuIcon className={icon} />
         <span>{pct(lhm.gpuLoad)}</span>
         <span>{temp(lhm.gpuTemp)}</span>
       </span>
