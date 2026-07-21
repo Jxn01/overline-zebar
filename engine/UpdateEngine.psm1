@@ -30,6 +30,40 @@ function New-UpdateItem {
     }
 }
 
+function Get-DriverClass {
+    # Classify a Windows Update driver by its title. Only 'display' drivers carry the
+    # "may replace your vendor driver" caveat in the UI (spec 15). switch -Regex is
+    # case-insensitive; first matching branch returns.
+    param([string]$Title)
+    switch -Regex ($Title) {
+        'display|graphics|video|\bGPU\b|radeon|geforce|nvidia' { return 'display' }
+        'mouse|keyboard|\bHID\b|touchpad|\binput\b|\bpen\b' { return 'input' }
+        'audio|\bAPO\b|AudioProcessingObject|\bsound\b|realtek' { return 'audio' }
+        default { return 'other' }
+    }
+}
+
+function Get-WindowsUpdates {
+    # WUA COM search for applicable, not-installed, not-hidden updates.
+    # Software + drivers both returned; driver items get driverClass + rebootHint.
+    # Throws on failure — check.ps1 records the per-channel error.
+    $items = @()
+    $session = New-Object -ComObject Microsoft.Update.Session
+    $searcher = $session.CreateUpdateSearcher()
+    $result = $searcher.Search("IsInstalled=0 and IsHidden=0")
+    foreach ($u in $result.Updates) {
+        $isDriver = $false
+        try { if ([int]$u.Type -eq 2) { $isDriver = $true } } catch {}   # 2 = uoDriver
+        if (-not $isDriver) {
+            try { foreach ($cat in $u.Categories) { if ($cat.Name -match 'Driver') { $isDriver = $true; break } } } catch {}
+        }
+        $dc = if ($isDriver) { Get-DriverClass $u.Title } else { $null }
+        $items += New-UpdateItem -channel 'windowsUpdate' -id ([string]$u.Identity.UpdateID) -name $u.Title `
+            -current '' -available '' -scope 'machine' -driver $isDriver -driverClass $dc -rebootHint $true
+    }
+    return $items
+}
+
 function Get-ColumnSlice {
     # Slice a fixed-width row [start, end), clamped to the row length, trimmed.
     param([string]$Row, [int]$Start, [int]$End)
