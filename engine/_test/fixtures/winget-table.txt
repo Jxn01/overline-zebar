@@ -1,0 +1,12 @@
+Name                    Id                        Version         Available       Source
+----------------------------------------------------------------------------------------
+Corsair iCUE5 Software  Corsair.iCUE.5            5.38.86         5.48.58         winget
+Modrinth App            Modrinth.ModrinthApp      0.15.11         0.15.14         winget
+MariaDB 12.2 (x64)      MariaDB.Server            12.2.2.0        12.3.2.0        winget
+3 upgrades available.
+
+The following packages have an upgrade available, but require explicit targeting for upgrade:
+Name                    Id                        Version         Available       Source
+----------------------------------------------------------------------------------------
+MSYS2                   MSYS2.MSYS2               20251213        20260611        winget
+1 package(s) have version numbers that cannot be determined.
