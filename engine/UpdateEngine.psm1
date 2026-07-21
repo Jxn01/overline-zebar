@@ -30,6 +30,61 @@ function New-UpdateItem {
     }
 }
 
+function Get-ColumnSlice {
+    # Slice a fixed-width row [start, end), clamped to the row length, trimmed.
+    param([string]$Row, [int]$Start, [int]$End)
+    if ($Start -ge $Row.Length) { return '' }
+    $End = [Math]::Min($End, $Row.Length)
+    if ($End -le $Start) { return '' }
+    return $Row.Substring($Start, $End - $Start).Trim()
+}
+
+function ConvertFrom-ScoopStatus {
+    # Parses `scoop status` (Name / Installed Version / Latest Version / …) into Item[].
+    param([string[]]$Lines)
+    $items = @()
+    if (-not $Lines) { return $items }
+
+    $hi = -1
+    for ($i = 0; $i -lt $Lines.Count; $i++) {
+        $l = $Lines[$i]
+        if ($l -match '^Name\s' -and $l -match 'Installed Version' -and $l -match 'Latest Version') { $hi = $i; break }
+    }
+    if ($hi -lt 0) { return $items }
+
+    $header = $Lines[$hi]
+    $cols = 'Name', 'Installed Version', 'Latest Version', 'Missing Dependencies', 'Info'
+    $starts = @()
+    $pos = 0
+    foreach ($c in $cols) {
+        $idx = $header.IndexOf($c, $pos)
+        if ($idx -lt 0) { $starts += -1 } else { $starts += $idx; $pos = $idx + $c.Length }
+    }
+    if ($starts[0] -lt 0 -or $starts[1] -lt 0 -or $starts[2] -lt 0) { return $items }
+    $latestEnd = if ($starts[3] -ge 0) { $starts[3] } else { [int]::MaxValue }
+
+    for ($i = $hi + 1; $i -lt $Lines.Count; $i++) {
+        $row = $Lines[$i]
+        if ([string]::IsNullOrWhiteSpace($row)) { continue }
+        if ($row -match '^\s*-{3,}') { continue }
+        if ($row -match '^(WARN|Everything is ok|Updating|Scoop)') { continue }
+
+        $name = Get-ColumnSlice $row $starts[0] $starts[1]
+        $inst = Get-ColumnSlice $row $starts[1] $starts[2]
+        $latest = Get-ColumnSlice $row $starts[2] $latestEnd
+        if ([string]::IsNullOrWhiteSpace($name) -or [string]::IsNullOrWhiteSpace($latest)) { continue }
+        $items += New-UpdateItem -channel 'scoop' -id $name -name $name -current $inst -available $latest -scope 'user'
+    }
+    return $items
+}
+
+function Get-ScoopUpdates {
+    # Assumes buckets were refreshed recently (the scheduled checker runs `scoop update`
+    # periodically). Captures all streams so the WARN header is included and skipped.
+    $out = (scoop status *>&1 | Out-String)
+    return (ConvertFrom-ScoopStatus ($out -split "`r?`n"))
+}
+
 function ConvertFrom-WingetTable {
     # Parses the FIRST table of `winget upgrade` output into Item[].
     # winget uses fixed-width columns aligned to the header; we derive each column's
