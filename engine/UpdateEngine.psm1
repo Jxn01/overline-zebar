@@ -30,6 +30,58 @@ function New-UpdateItem {
     }
 }
 
+function Read-JsonFile {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    try { return (Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop) } catch { return $null }
+}
+
+function Read-IgnoreStore {
+    param([string]$Path)
+    $j = Read-JsonFile $Path
+    if (-not $j) { return [pscustomobject]@{ skipVersion = @(); ignorePackage = @() } }
+    if ($null -eq $j.skipVersion) { $j | Add-Member -NotePropertyName skipVersion -NotePropertyValue @() -Force }
+    if ($null -eq $j.ignorePackage) { $j | Add-Member -NotePropertyName ignorePackage -NotePropertyValue @() -Force }
+    return $j
+}
+
+function Read-LastApply { param([string]$Path) $j = Read-JsonFile $Path; if (-not $j) { return [pscustomobject]@{} } return $j }
+
+function Read-InteractiveOverrides { param([string]$Path) $j = Read-JsonFile $Path; if (-not $j) { return [pscustomobject]@{} } return $j }
+
+function Merge-IgnoreStaleInteractive {
+    # Drops ignored/skipped items, flags post-apply false-positives, and populates
+    # `interactive` from the overrides map (spec 10, 13; fable fix #2).
+    param($Items, $Ignore, $LastApply, $Overrides)
+    $result = @()
+
+    $ignorePkg = @{}
+    if ($Ignore.ignorePackage) { foreach ($e in $Ignore.ignorePackage) { $ignorePkg["$($e.channel)|$($e.id)"] = $true } }
+    $skipVer = @{}
+    if ($Ignore.skipVersion) { foreach ($e in $Ignore.skipVersion) { $skipVer["$($e.channel)|$($e.id)|$($e.version)"] = $true } }
+
+    foreach ($it in $Items) {
+        if ($ignorePkg.ContainsKey("$($it.channel)|$($it.id)")) { continue }
+        if ($skipVer.ContainsKey("$($it.channel)|$($it.id)|$($it.available)")) { continue }
+
+        if ($Overrides) {
+            $ovProp = $Overrides.PSObject.Properties[$it.id]
+            if ($ovProp -and $ovProp.Value) { $it.interactive = [string]$ovProp.Value }
+        }
+
+        if ($LastApply) {
+            $laProp = $LastApply.PSObject.Properties[$it.id]
+            if ($laProp -and $laProp.Value) {
+                $la = $laProp.Value
+                if (([int]$la.exitCode -eq 0) -and ($la.appliedVersion -eq $it.available)) { $it.suspectStale = $true }
+            }
+        }
+
+        $result += $it
+    }
+    return $result
+}
+
 function Get-DriverClass {
     # Classify a Windows Update driver by its title. Only 'display' drivers carry the
     # "may replace your vendor driver" caveat in the UI (spec 15). switch -Regex is
