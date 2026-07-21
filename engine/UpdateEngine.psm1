@@ -30,6 +30,56 @@ function New-UpdateItem {
     }
 }
 
+function Get-WingetMutex {
+    # A single named mutex serializes ALL winget access across the unelevated checker/
+    # widget and the elevated applier. A default-security Global\ mutex throws when opened
+    # from a different integrity level, so we create it with an Everyone-FullControl ACL
+    # (fable review). OpenExisting first so we never clobber an existing owner's object.
+    $name = 'Global\OverlineWingetLock'
+    try { return [System.Threading.Mutex]::OpenExisting($name) } catch { }
+    try {
+        Add-Type -AssemblyName System.Threading.AccessControl -ErrorAction Stop
+        $everyone = New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]::WorldSid, $null)
+        $rule = New-Object System.Security.AccessControl.MutexAccessRule($everyone, [System.Security.AccessControl.MutexRights]::FullControl, [System.Security.AccessControl.AccessControlType]::Allow)
+        $sec = New-Object System.Security.AccessControl.MutexSecurity
+        $sec.AddAccessRule($rule)
+        $createdNew = $false
+        return [System.Threading.MutexAcl]::Create($false, $name, [ref]$createdNew, $sec)
+    } catch {
+        $createdNew = $false
+        return [System.Threading.Mutex]::new($false, $name, [ref]$createdNew)
+    }
+}
+
+function Invoke-WithWingetLock {
+    # Runs $Block while holding the winget mutex. Returns the block's result, or $null if
+    # the lock could not be acquired within $TimeoutMs (caller keeps last-good cache).
+    # Returns { Acquired = $bool; Value = <block result> }. The explicit wrapper is required:
+    # a block returning an empty array would otherwise unroll to $null and be indistinguishable
+    # from "lock not acquired".
+    param([scriptblock]$Block, [int]$TimeoutMs = 0)
+    $mutex = Get-WingetMutex
+    $acquired = $false
+    try {
+        try { $acquired = $mutex.WaitOne($TimeoutMs) }
+        catch [System.Threading.AbandonedMutexException] { $acquired = $true }
+        if (-not $acquired) { return [pscustomobject]@{ Acquired = $false; Value = $null } }
+        return [pscustomobject]@{ Acquired = $true; Value = (& $Block) }
+    } finally {
+        if ($acquired) { try { $mutex.ReleaseMutex() } catch { } }
+        $mutex.Dispose()
+    }
+}
+
+function Write-StatusAtomic {
+    # Serialize $Object to JSON and move it into place atomically (temp + rename) so a
+    # reader never sees a half-written file.
+    param($Object, [string]$Path)
+    $tmp = "$Path.tmp"
+    ($Object | ConvertTo-Json -Depth 12) | Set-Content -LiteralPath $tmp -Encoding utf8
+    Move-Item -LiteralPath $tmp -Destination $Path -Force
+}
+
 function Read-JsonFile {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path)) { return $null }
@@ -64,12 +114,12 @@ function Merge-IgnoreStaleInteractive {
         if ($ignorePkg.ContainsKey("$($it.channel)|$($it.id)")) { continue }
         if ($skipVer.ContainsKey("$($it.channel)|$($it.id)|$($it.available)")) { continue }
 
-        if ($Overrides) {
+        if ($Overrides -and $it.id) {
             $ovProp = $Overrides.PSObject.Properties[$it.id]
             if ($ovProp -and $ovProp.Value) { $it.interactive = [string]$ovProp.Value }
         }
 
-        if ($LastApply) {
+        if ($LastApply -and $it.id) {
             $laProp = $LastApply.PSObject.Properties[$it.id]
             if ($laProp -and $laProp.Value) {
                 $la = $laProp.Value
