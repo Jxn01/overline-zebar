@@ -95,8 +95,15 @@ if ($elevated.Count) {
     @{ items = $elevated; includeDrivers = [bool]$includeDrivers } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $elevJob
     $elevScript = Join-Path $PSScriptRoot 'apply-elevated.ps1'
     Log "ELEVATE launching $($elevated.Count) item(s) (one UAC)"
-    Start-Process pwsh -Verb RunAs -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $elevScript, '-Job', $elevJob, '-Root', $Root, '-RunLog', $RunLog
-    # apply-elevated.ps1 writes the DONE sentinel once it finishes.
+    try {
+        Start-Process pwsh -Verb RunAs -ErrorAction Stop -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $elevScript, '-Job', $elevJob, '-Root', $Root, '-RunLog', $RunLog
+        # on success apply-elevated.ps1 writes the DONE sentinel once it finishes.
+    } catch {
+        # UAC declined / launch failed: write our own DONE so the widget's tail loop ends
+        # cleanly instead of spinning until timeout.
+        Log "STATUS elevated failed $($_.Exception.Message)"
+        Log 'DONE 1'
+    }
 } else {
     Log 'DONE 0'
 }
