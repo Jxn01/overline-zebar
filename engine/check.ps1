@@ -48,13 +48,23 @@ if (-not $lockResult.Acquired) {
     $winget = New-ChannelResult (@($lockResult.Value)) $null
 }
 
-# windows update
-$wu = try { New-ChannelResult (Get-WindowsUpdates) $null } catch { New-ChannelResult @() $_.Exception.Message }
+# windows update: the WUA COM search is slow, so run it at most every ~4h (spec 6);
+# between checks carry forward the last-good WU channel so the count doesn't blink to zero.
+$wuMarker = Join-Path $Root '.wu-check'
+$wuDue = -not (Test-Path $wuMarker) -or ((Get-Date) - (Get-Item $wuMarker).LastWriteTime).TotalHours -ge 4
+if ($wuDue) {
+    $wu = try { New-ChannelResult (Get-WindowsUpdates) $null } catch { New-ChannelResult @() $_.Exception.Message }
+    if (-not $wu.error) { Set-Content -LiteralPath $wuMarker -Value (Get-Date -Format o) }
+} elseif ($prev -and $prev.channels.windowsUpdate) {
+    $wu = $prev.channels.windowsUpdate
+} else {
+    $wu = New-ChannelResult @() $null
+}
 
 # merge ignore/stale/interactive per channel (winget stale-from-cache items are already merged)
 $scoop.items = @(Merge-IgnoreStaleInteractive $scoop.items $ignore $lastApply $overrides)
 if (-not $wingetLocked) { $winget.items = @(Merge-IgnoreStaleInteractive $winget.items $ignore $lastApply $overrides) }
-$wu.items = @(Merge-IgnoreStaleInteractive $wu.items $ignore $lastApply $overrides)
+if ($wuDue) { $wu.items = @(Merge-IgnoreStaleInteractive $wu.items $ignore $lastApply $overrides) }
 
 $status = [pscustomobject]@{
     generatedAt  = $nowIso
