@@ -298,6 +298,10 @@
         "shellCommands": [
           {
             "program": "cmd",
+            "argsRegex": ".*(LOCALAPPDATA|overline-updates).*"
+          },
+          {
+            "program": "pwsh",
             "argsRegex": ".*overline-updates.*"
           }
         ]

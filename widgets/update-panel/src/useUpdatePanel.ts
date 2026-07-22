@@ -2,26 +2,40 @@ import { useCallback, useEffect, useState } from 'react';
 import * as zebar from 'zebar';
 import type { UpdateStatus, IgnoreStore, ChannelKey, UpdateItem } from './status';
 
-// Everything is launched through `cmd /c` so %LOCALAPPDATA% expands (pwsh does not expand
-// %VAR%). apply.ps1 writes STATUS lines + a DONE sentinel to run-<id>.log, which we tail.
-// No double-quotes in these command strings: cmd /c mangles embedded quotes, and the engine
-// paths under %LOCALAPPDATA%\overline-updates contain no spaces, so quoting is unnecessary.
-const ROOT = '%LOCALAPPDATA%\\overline-updates';
-const ENG = `${ROOT}\\engine`;
-const PWSH = (file: string, args: string) =>
-  `pwsh -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ${ENG}\\${file} ${args}`;
-
-async function cmd(command: string): Promise<string> {
-  const res = await zebar.shellExec('cmd', ['/c', command]);
-  return res.stdout ?? '';
+// SECURITY: package ids/versions come from winget/scoop/WU output and must never be spliced
+// into a shell string. We resolve %LOCALAPPDATA% once via cmd (pwsh does not expand %VAR%),
+// then invoke everything as shellExec/shellSpawn(program, [args...]) — args passed as a real
+// argv array, not a shell string — so those values cannot inject commands.
+let rootAbs: string | null = null;
+async function root(): Promise<string> {
+  if (rootAbs) return rootAbs;
+  const res = await zebar.shellExec('cmd', ['/c', 'echo %LOCALAPPDATA%']);
+  rootAbs = `${(res.stdout ?? '').trim()}\\overline-updates`;
+  return rootAbs;
 }
+const PWSH = ['-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass', '-File'];
+
 async function readJson<T>(file: string): Promise<T | null> {
   try {
-    const t = (await cmd(`type ${ROOT}\\${file}`)).trim();
+    const res = await zebar.shellExec('cmd', ['/c', 'type', `${await root()}\\${file}`]);
+    const t = (res.stdout ?? '').trim();
     return t ? (JSON.parse(t) as T) : null;
   } catch {
     return null;
   }
+}
+async function readText(abs: string): Promise<string> {
+  try {
+    return (await zebar.shellExec('cmd', ['/c', 'type', abs])).stdout ?? '';
+  } catch {
+    return '';
+  }
+}
+async function runScript(file: string, args: string[]): Promise<void> {
+  await zebar.shellExec('pwsh', [...PWSH, `${await root()}\\engine\\${file}`, ...args]);
+}
+async function spawnScript(file: string, args: string[]): Promise<void> {
+  await zebar.shellSpawn('pwsh', [...PWSH, `${await root()}\\engine\\${file}`, ...args]);
 }
 
 export type RowState = { state: 'updating' | 'done' | 'failed'; detail?: string };
@@ -42,28 +56,22 @@ export function useUpdatePanel() {
   }, [reload]);
 
   const runApply = useCallback(
-    async (args: string) => {
+    async (args: string[]) => {
       if (busy) return;
       setBusy(true);
       setNotice('');
       setRows({});
       const runId = Math.random().toString(36).slice(2, 10);
-      const runLog = `${ROOT}\\run-${runId}.log`;
+      const runLog = `${await root()}\\run-${runId}.log`;
       try {
-        await zebar.shellSpawn('cmd', ['/c', PWSH('apply.ps1', `${args} -RunId ${runId}`)]);
+        await spawnScript('apply.ps1', [...args, '-RunId', runId]);
       } catch {
-        /* spawn failure shows as an empty log below */
+        /* spawn failure surfaces as an empty log below */
       }
       const start = Date.now();
       for (;;) {
-        await new Promise((r) => setTimeout(r, 800));
-        let text = '';
-        try {
-          text = await cmd(`type ${runLog}`);
-        } catch {
-          text = '';
-        }
-        const lines = text.split(/\r?\n/);
+        await new Promise((res) => setTimeout(res, 800));
+        const lines = (await readText(runLog)).split(/\r?\n/);
         const next: Record<string, RowState> = {};
         for (const ln of lines) {
           let m = ln.match(/^STATUS (\S+) updating/);
@@ -86,48 +94,40 @@ export function useUpdatePanel() {
     [busy, reload]
   );
 
-  const script = useCallback(async (file: string, args: string) => {
-    try {
-      await cmd(PWSH(file, args));
-    } catch {
-      /* best-effort */
-    }
-  }, []);
-
-  const updateAll = useCallback((drivers = false) => runApply(drivers ? '-All -IncludeDrivers' : '-All'), [runApply]);
-  const updateChannel = useCallback((ch: ChannelKey) => runApply(`-Channel ${ch}`), [runApply]);
-  const updateDrivers = useCallback(() => runApply('-Channel windowsUpdate -IncludeDrivers'), [runApply]);
-  const updateItem = useCallback((it: UpdateItem) => runApply(`-Ids ${it.id}`), [runApply]);
+  const updateAll = useCallback((drivers = false) => runApply(drivers ? ['-All', '-IncludeDrivers'] : ['-All']), [runApply]);
+  const updateChannel = useCallback((ch: ChannelKey) => runApply(['-Channel', ch]), [runApply]);
+  const updateDrivers = useCallback(() => runApply(['-Channel', 'windowsUpdate', '-IncludeDrivers']), [runApply]);
+  const updateItem = useCallback((it: UpdateItem) => runApply(['-Ids', it.id]), [runApply]);
 
   const checkNow = useCallback(async () => {
     if (busy) return;
     setBusy(true);
     setNotice('checking…');
-    await script('check.ps1', '');
+    await runScript('check.ps1', []);
     await reload();
     setNotice('');
     setBusy(false);
-  }, [busy, reload, script]);
+  }, [busy, reload]);
 
   const hide = useCallback(
     async (it: UpdateItem, pkg = false) => {
-      const a = pkg
-        ? `-Action ignorePkg -Channel ${it.channel} -Id ${it.id}`
-        : `-Action skip -Channel ${it.channel} -Id ${it.id} -Version ${it.available || '0'}`;
-      await script('ignore.ps1', a);
-      await script('check.ps1', '');
+      const args = pkg
+        ? ['-Action', 'ignorePkg', '-Channel', it.channel, '-Id', it.id]
+        : ['-Action', 'skip', '-Channel', it.channel, '-Id', it.id, '-Version', it.available || '0'];
+      await runScript('ignore.ps1', args);
+      await runScript('check.ps1', []);
       await reload();
     },
-    [script, reload]
+    [reload]
   );
 
   const unhide = useCallback(
     async (channel: ChannelKey, id: string) => {
-      await script('ignore.ps1', `-Action unhide -Channel ${channel} -Id ${id}`);
-      await script('check.ps1', '');
+      await runScript('ignore.ps1', ['-Action', 'unhide', '-Channel', channel, '-Id', id]);
+      await runScript('check.ps1', []);
       await reload();
     },
-    [script, reload]
+    [reload]
   );
 
   return { status, ignore, rows, busy, notice, reload, updateAll, updateChannel, updateDrivers, updateItem, checkNow, hide, unhide };

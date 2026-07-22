@@ -79,8 +79,13 @@ Everything above works unelevated. These two need one elevation each — run the
   upgrade; elevated helper code complete). `run-tests.ps1` is green.
 - **Island (Phase 2) — DONE, live-verified.** CDP screenshot confirmed it shows the real count on
   the bar and auto-hides at zero.
-- **Modal (Phase 3-4) — code complete.** Renders channels/items/drivers/hidden, wires
-  update-all / per-channel / per-item / hide / un-hide / check-now via the engine. Interactive
-  button behaviour + the elevated-apply UAC path are verified by you (the modal closes on a
-  CDP focus-steal, so those can't be self-screenshotted).
-- **Remaining human-gated:** the two SETUP steps above.
+- **Modal (Phase 3-4) — render + action-layer verified.** CDP-verified rendering channels /
+  items / drivers / hidden with correct badges. The action layer passes ids/versions as an argv
+  **array** (never a shell string — no command injection), invoking `pwsh -File <abs> <args>`.
+  Each action verified by running the widget's exact deployed script + args: `check.ps1` advances
+  `status.json`; `apply.ps1 -Ids …` writes a `DONE`-terminated run-log; `ignore.ps1` skip/unhide
+  round-trip. Unelevated apply also verified with a real Modrinth upgrade.
+- **NOT executed through the widget UI (verify on first use):** clicking a button end-to-end, and
+  the island → panel open (proven `openPanel` pattern, but never clicked). Low risk.
+- **Genuinely human-gated (need a UAC click):** the elevated apply (machine winget / Windows
+  Update) and the scheduled-task registration — the two SETUP steps above.
