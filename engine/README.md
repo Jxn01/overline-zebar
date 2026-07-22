@@ -1,0 +1,86 @@
+# Update-notifier island — engine + setup
+
+A pamac-style update notifier for the overline-zebar bar. An auto-hiding **island** shows
+`N updates` with a per-channel icon; clicking opens a **modal** to update everything / a whole
+channel / individual items, with hide-ignore + undo, live progress, and a desktop-icon sweep.
+Channels: **scoop**, **winget**, **Windows Update**.
+
+Design: `docs/superpowers/specs/2026-07-22-update-island-design.md`
+Plan: `docs/superpowers/plans/2026-07-22-update-island.md`
+
+## Layout
+
+```
+engine/
+  UpdateEngine.psm1      # the module: parsers, mutex, apply, sweep, last-apply
+  check.ps1              # enumerate channels -> status.json (scheduled + "Check now")
+  apply.ps1              # apply updates (-All / -Channel <c> / -Ids a,b / -Job file); -WhatIf
+  apply-elevated.ps1     # elevated helper (machine winget + Windows Update), one RunAs
+  ignore.ps1             # hide (skip-version / ignore-package) + un-hide
+  deploy.ps1             # copy engine -> %LOCALAPPDATA%\overline-updates\engine, harden helper
+  install-task.ps1       # register the scheduled checker (NEEDS ELEVATION)
+  interactive-overrides.json   # ids known to need interactive install (seeded: Corsair.iCUE.5)
+  _test/                 # dependency-free assert harness; run-tests.ps1
+widgets/main/src/components/updates/   # the island (UpdateIsland.tsx, status.ts, useUpdateStatus.ts)
+widgets/update-panel/                  # the modal widget
+```
+
+Runtime data lives in `%LOCALAPPDATA%\overline-updates\`: `status.json`, `ignore.json`,
+`last-apply.json`, `run-<id>.log`, `.scoop-bucket-refresh`, `.wu-check`.
+
+## Run the tests
+
+```
+pwsh -NoProfile -File engine/_test/run-tests.ps1     # "all green"
+```
+
+## Deploy
+
+```
+# 1. engine -> LOCALAPPDATA (unelevated; run ELEVATED when re-deploying apply-elevated.ps1)
+pwsh -NoProfile -File engine/deploy.ps1
+
+# 2. widgets: build, then copy dist over the deployed pack, then restart zebar
+pnpm --filter @overline-zebar/main build
+pnpm --filter @overline-zebar/update-panel build
+#   copy widgets/main/dist and widgets/update-panel/dist over
+#   %APPDATA%\zebar\downloads\mushfikurr.overline-zebar@1.0.3\widgets\*\dist
+#   and add the update-panel entry + the main `cmd` shellCommand to that pack's zpack.json
+#   (the deployed manifest keeps live 46px/primary settings — do NOT overwrite it wholesale).
+```
+
+The island reads `status.json`; run `check.ps1` once to populate it before first launch.
+
+## SETUP — the elevated steps (need a UAC click; batched here on purpose)
+
+Everything above works unelevated. These two need one elevation each — run them yourself:
+
+1. **Register the scheduled checker** (so the island refreshes automatically):
+   ```
+   # from an ELEVATED pwsh:
+   pwsh -File "$env:LOCALAPPDATA\overline-updates\engine\install-task.ps1"
+   ```
+   Registers `overline-update-check` for `JXN-WINDOWS\jxn` (Limited), at logon + every 45 min.
+
+2. **First elevated apply is UAC-gated by design.** Clicking "Update everything" or updating a
+   machine-scope winget / Windows Update item launches `apply-elevated.ps1` via `Start-Process
+   -Verb RunAs` — one UAC per batch. To smoke-test it outside the widget:
+   ```
+   pwsh -File "$env:LOCALAPPDATA\overline-updates\engine\apply.ps1" -Channel winget -WhatIf
+   # then, for real (will prompt UAC for machine-scope items):
+   pwsh -File "$env:LOCALAPPDATA\overline-updates\engine\apply.ps1" -Ids <some.machine.id> -RunId test
+   #   tail %LOCALAPPDATA%\overline-updates\run-test.log — expect STATUS ... then DONE <code>.
+   ```
+
+## Status (2026-07-22)
+
+- **Engine (Phase 1) — DONE, fully tested + live-verified.** All parsers, cross-integrity mutex,
+  atomic writes, WU throttle, and the apply engine (unelevated verified with a real Modrinth
+  upgrade; elevated helper code complete). `run-tests.ps1` is green.
+- **Island (Phase 2) — DONE, live-verified.** CDP screenshot confirmed it shows the real count on
+  the bar and auto-hides at zero.
+- **Modal (Phase 3-4) — code complete.** Renders channels/items/drivers/hidden, wires
+  update-all / per-channel / per-item / hide / un-hide / check-now via the engine. Interactive
+  button behaviour + the elevated-apply UAC path are verified by you (the modal closes on a
+  CDP focus-steal, so those can't be self-screenshotted).
+- **Remaining human-gated:** the two SETUP steps above.
