@@ -347,6 +347,28 @@ function Invoke-WingetApply {
     return $LASTEXITCODE
 }
 
+function Invoke-WUApply {
+    # Download + install one Windows Update by UpdateID via WUA COM. Requires elevation.
+    # Returns 0 on success (ResultCode 2 = orcSucceeded), non-zero otherwise.
+    param([string]$UpdateId)
+    $session = New-Object -ComObject Microsoft.Update.Session
+    $searcher = $session.CreateUpdateSearcher()
+    $result = $searcher.Search("IsInstalled=0 and IsHidden=0")
+    $coll = New-Object -ComObject Microsoft.Update.UpdateColl
+    foreach ($u in $result.Updates) {
+        if ([string]$u.Identity.UpdateID -eq $UpdateId) {
+            try { if (-not $u.EulaAccepted) { $u.AcceptEula() } } catch { }
+            [void]$coll.Add($u)
+        }
+    }
+    if ($coll.Count -eq 0) { return 1 }
+    $downloader = $session.CreateUpdateDownloader(); $downloader.Updates = $coll
+    [void]$downloader.Download()
+    $installer = $session.CreateUpdateInstaller(); $installer.Updates = $coll
+    $ir = $installer.Install()
+    if ([int]$ir.ResultCode -eq 2) { return 0 } else { return [int]$ir.ResultCode }
+}
+
 function Get-RunLogState {
     # Interpret an elevated run-log: 'complete' if it ends with a DONE record, else 'crashed'
     # (the process died mid-run without writing its sentinel). Mirrors the .rc/DONE pattern.

@@ -52,5 +52,23 @@ foreach ($it in $items) {
 
 $removed = @(Complete-DesktopSweep $snap $userDesktops)
 if ($removed.Count) { Log "SWEPT $($removed.Count) desktop shortcut(s)" }
-Log 'DONE 0'
+
+# Bundle everything that needs elevation (machine-scope winget + Windows Update) into ONE
+# RunAs launch of apply-elevated.ps1, which appends to the SAME run-log and writes the DONE
+# sentinel. Drivers are excluded unless the job opted in.
+$elevated = @($items | Where-Object { $_.channel -eq 'windowsUpdate' -or ($_.channel -eq 'winget' -and $_.scope -eq 'machine') })
+if (-not $jobData.includeDrivers) {
+    $elevated = @($elevated | Where-Object { -not ($_.channel -eq 'windowsUpdate' -and $_.driver) })
+}
+
+if ($elevated.Count) {
+    $elevJob = Join-Path $Root ('elevjob-' + [guid]::NewGuid().ToString('N') + '.json')
+    @{ items = $elevated; includeDrivers = [bool]$jobData.includeDrivers } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $elevJob
+    $elevScript = Join-Path $PSScriptRoot 'apply-elevated.ps1'
+    Log "ELEVATE launching $($elevated.Count) item(s) (one UAC)"
+    Start-Process pwsh -Verb RunAs -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $elevScript, '-Job', $elevJob, '-Root', $Root, '-RunLog', $RunLog
+    # apply-elevated.ps1 writes the DONE sentinel once it finishes.
+} else {
+    Log 'DONE 0'
+}
 Write-Host "run-log: $RunLog"
