@@ -5,6 +5,7 @@ import { Power } from 'lucide-react';
 import { useLhmSensors } from './hooks/useLhmSensors';
 import Stats, { diskUsedPct } from './components/stats';
 import Media from './components/media';
+import UpdateIsland from './components/updates/UpdateIsland';
 import Network from './components/network';
 import Systray from './components/systray';
 import { TimeDisplay } from './components/TimeDisplay';
@@ -114,6 +115,9 @@ function App() {
   // Stats graphs are anchored left, under the stats island.
   const openStatsGraph = () =>
     openPanel('stats-graph', '420px', '360px', 'top_left', '8px');
+  // Update manager panel, anchored left under the stats/update islands.
+  const openUpdatePanel = () =>
+    openPanel('update-panel', '360px', '520px', 'top_left', '8px');
 
   return (
     <div className="relative flex justify-between items-center h-screen px-2 py-1 text-text antialiased select-none font-mono">
@@ -133,6 +137,7 @@ function App() {
             lhm={lhm}
           />
         </Chip>
+        <UpdateIsland onOpen={openUpdatePanel} />
         <Media media={output.media} />
       </div>
 

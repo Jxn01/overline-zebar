@@ -44,6 +44,10 @@
           {
             "program": "explorer",
             "argsRegex": ".*"
+          },
+          {
+            "program": "cmd",
+            "argsRegex": ".*overline-updates.*"
           }
         ]
       },
