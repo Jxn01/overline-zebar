@@ -26,7 +26,12 @@ function New-ChannelResult($items, $err, $stale = $false) {
     [pscustomobject]@{ checkedAt = $nowIso; stale = $stale; error = $err; items = $arr }
 }
 
-if ($RefreshScoopBuckets) { try { scoop update *> $null } catch { } }
+# Refresh scoop buckets at most every ~3h (a git pull of every bucket is slow), or on demand.
+$bucketMarker = Join-Path $Root '.scoop-bucket-refresh'
+$bucketsStale = -not (Test-Path $bucketMarker) -or ((Get-Date) - (Get-Item $bucketMarker).LastWriteTime).TotalHours -ge 3
+if ($RefreshScoopBuckets -or $bucketsStale) {
+    try { scoop update *> $null; Set-Content -LiteralPath $bucketMarker -Value (Get-Date -Format o) } catch { }
+}
 
 # scoop
 $scoop = try { New-ChannelResult (Get-ScoopUpdates) $null } catch { New-ChannelResult @() $_.Exception.Message }
