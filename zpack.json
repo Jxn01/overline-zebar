@@ -282,6 +282,46 @@
       ]
     },
     {
+      "name": "update-panel",
+      "htmlPath": "./widgets/update-panel/dist/index.html",
+      "zOrder": "normal",
+      "shownInTaskbar": false,
+      "focused": true,
+      "resizable": false,
+      "transparent": true,
+      "includeFiles": [
+        "widgets/update-panel/dist/index.html",
+        "widgets/update-panel/dist/assets/**",
+        "widgets/update-panel/dist/geistMono/**"
+      ],
+      "privileges": {
+        "shellCommands": [
+          {
+            "program": "cmd",
+            "argsRegex": ".*overline-updates.*"
+          }
+        ]
+      },
+      "presets": [
+        {
+          "name": "default",
+          "anchor": "top_left",
+          "offsetX": "8px",
+          "offsetY": "54px",
+          "width": "360px",
+          "height": "520px",
+          "monitorSelection": {
+            "type": "primary"
+          },
+          "dockToEdge": {
+            "enabled": false,
+            "edge": null,
+            "windowMargin": "0px"
+          }
+        }
+      ]
+    },
+    {
       "name": "power",
       "htmlPath": "./widgets/power/dist/index.html",
       "zOrder": "normal",
