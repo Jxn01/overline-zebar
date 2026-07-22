@@ -85,15 +85,13 @@ Everything above works unelevated. These two need one elevation each — run the
   Each action verified by running the widget's exact deployed script + args: `check.ps1` advances
   `status.json`; `apply.ps1 -Ids …` writes a `DONE`-terminated run-log; `ignore.ps1` skip/unhide
   round-trip. Unelevated apply also verified with a real Modrinth upgrade.
-- **Elevated apply — DISPATCH + failure path verified (2026-07-22); a successful elevated INSTALL
-  was not.** Ran a real Defender-WU apply through the widget flow: `apply.ps1` → RunAs (accepted) →
-  `apply-elevated.ps1` → WUA COM → `STATUS`/`DONE`; `Get-RunLogState` = `complete`. Honest caveat:
-  the Defender item was already current, so `Invoke-WUApply` returned at the `coll.Count == 0`
-  branch — the actual **download+install COM sequence never ran**, **machine-scope winget elevated
-  apply never ran** (a WU item was tested, not winget), and the **cross-integrity mutex under an
-  elevated *winget* op is unproven in practice**. What's proven: the RunAs dispatch, the elevated
-  helper, the run-log/DONE contract, and clean failure handling (no hang). The unexercised install
-  code is standard winget/WUA that ran fine last session — low-risk, left unexercised on purpose.
+- **Elevated apply — FULLY VERIFIED end-to-end (2026-07-22), including a successful install.**
+  Ran a real **machine-scope winget install** (iCUE) through the widget flow: `apply.ps1` → RunAs
+  (accepted) → `apply-elevated.ps1` → `Invoke-WithWingetLock` (**cross-integrity mutex held in the
+  elevated helper**) → `Invoke-WingetApply` → **winget exit 0** → `STATUS … done` → `DONE 0`. Also
+  verified: the **failure path** (an already-current Defender WU item → `failed exit=1` + clean
+  `DONE`, no hang) and the **suspectStale auto-flag** (after the successful iCUE apply, the next
+  check re-flagged iCUE as already-current — its ARP version lags — and dropped it from the count).
 - **Scheduled task — VERIFIED (2026-07-22).** `install-task.ps1` registered `overline-update-check`
   (Ready, Limited, user `jxn`, logon + 45 min); `Start-ScheduledTask` ran it (`LastTaskResult 0x0`)
   and it refreshed `status.json`. The island now auto-refreshes.
