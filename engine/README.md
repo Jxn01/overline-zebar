@@ -85,7 +85,12 @@ Everything above works unelevated. These two need one elevation each — run the
   Each action verified by running the widget's exact deployed script + args: `check.ps1` advances
   `status.json`; `apply.ps1 -Ids …` writes a `DONE`-terminated run-log; `ignore.ps1` skip/unhide
   round-trip. Unelevated apply also verified with a real Modrinth upgrade.
-- **NOT executed through the widget UI (verify on first use):** clicking a button end-to-end, and
-  the island → panel open (proven `openPanel` pattern, but never clicked). Low risk.
-- **Genuinely human-gated (need a UAC click):** the elevated apply (machine winget / Windows
-  Update) and the scheduled-task registration — the two SETUP steps above.
+- **Elevated apply path — VERIFIED end-to-end (2026-07-22).** Ran a real apply of the Defender WU
+  item through the widget flow: `apply.ps1` → RunAs (accepted) → `apply-elevated.ps1` → WUA COM →
+  `STATUS`/`DONE` sentinel; `Get-RunLogState` = `complete`. The item was already current so it
+  reported `failed exit=1` + clean `DONE` — which also proves the failure path doesn't hang.
+- **Scheduled task — VERIFIED (2026-07-22).** `install-task.ps1` registered `overline-update-check`
+  (Ready, Limited, user `jxn`, logon + 45 min); `Start-ScheduledTask` ran it (`LastTaskResult 0x0`)
+  and it refreshed `status.json`. The island now auto-refreshes.
+- **Only thing never clicked through the UI:** the button/island interactions themselves (their
+  exact underlying commands ARE verified). Low risk, proven patterns.
