@@ -286,4 +286,74 @@ function Get-WingetUpdates {
     return (ConvertFrom-WingetTable $out)
 }
 
+# ---------------------------------------------------------------------------------------
+# Apply: upgrades + desktop-icon sweep + last-apply outcome store
+# ---------------------------------------------------------------------------------------
+
+function Get-UserDesktopPaths { , @([Environment]::GetFolderPath('Desktop')) }
+function Get-PublicDesktopPath { Join-Path $env:PUBLIC 'Desktop' }
+
+function Get-DesktopShortcutSnapshot {
+    # Hashtable of every .lnk present on the given desktop paths (the "before" set).
+    param([string[]]$Paths)
+    $set = @{}
+    foreach ($p in $Paths) {
+        if (Test-Path $p) {
+            Get-ChildItem $p -Filter '*.lnk' -File -ErrorAction SilentlyContinue | ForEach-Object { $set[$_.FullName] = $true }
+        }
+    }
+    return $set
+}
+
+function Complete-DesktopSweep {
+    # Delete any .lnk that appeared since the snapshot (an installer's new desktop icon).
+    param($Snapshot, [string[]]$Paths)
+    $removed = @()
+    foreach ($p in $Paths) {
+        if (-not (Test-Path $p)) { continue }
+        Get-ChildItem $p -Filter '*.lnk' -File -ErrorAction SilentlyContinue | ForEach-Object {
+            if (-not $Snapshot.ContainsKey($_.FullName)) {
+                Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+                $removed += $_.FullName
+            }
+        }
+    }
+    return $removed
+}
+
+function Write-LastApply {
+    # Record an apply outcome so check.ps1 can compute suspectStale (spec 10). Atomic.
+    param([string]$Path, [string]$Id, [string]$Version, [int]$ExitCode)
+    $obj = Read-LastApply $Path
+    if (-not $obj) { $obj = [pscustomobject]@{} }
+    $entry = [pscustomobject]@{ appliedVersion = $Version; at = (Get-Date -Format o); exitCode = $ExitCode }
+    $obj | Add-Member -NotePropertyName $Id -NotePropertyValue $entry -Force
+    $tmp = "$Path.tmp"
+    ($obj | ConvertTo-Json -Depth 12) | Set-Content -LiteralPath $tmp -Encoding utf8
+    Move-Item -LiteralPath $tmp -Destination $Path -Force
+}
+
+function Invoke-ScoopApply {
+    param([string]$Id)
+    scoop update $Id *>&1 | Out-Null
+    return $LASTEXITCODE
+}
+
+function Invoke-WingetApply {
+    param([string]$Id, [switch]$Interactive)
+    $a = @('upgrade', '--id', $Id, '--exact', '--accept-package-agreements', '--accept-source-agreements')
+    if ($Interactive) { $a += '--interactive' } else { $a += @('--silent', '--disable-interactivity') }
+    winget @a *>&1 | Out-Null
+    return $LASTEXITCODE
+}
+
+function Get-RunLogState {
+    # Interpret an elevated run-log: 'complete' if it ends with a DONE record, else 'crashed'
+    # (the process died mid-run without writing its sentinel). Mirrors the .rc/DONE pattern.
+    param([string[]]$Lines)
+    $done = $Lines | Where-Object { $_ -match '^DONE\s' } | Select-Object -Last 1
+    if ($done) { return 'complete' }
+    return 'crashed'
+}
+
 Export-ModuleMember -Function *
