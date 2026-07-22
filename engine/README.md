@@ -51,6 +51,19 @@ pnpm --filter @overline-zebar/update-panel build
 
 The island reads `status.json`; run `check.ps1` once to populate it before first launch.
 
+## Known limitations
+
+- **Every winget item defaults to `scope='machine'`** (the checker doesn't yet distinguish
+  user-scope installs). Consequence: *every* winget "Update" routes through the elevated helper and
+  pops a UAC — including genuinely **user-scope** apps (VS Code User, Cursor, Modrinth…). For most
+  that's just an unnecessary prompt, but it's a **real failure mode**, not cosmetic: user-scope
+  packages can misbehave under elevation (cf. the MSYS2 "cannot be operated on with administrator
+  privileges" case in this machine's memory). Refining scope detection (e.g. from
+  `Get-WinGetPackage`'s source/scope, or an ARP user-vs-machine lookup) is the highest-value future
+  improvement. Decide it deliberately; don't treat it as a nicety.
+- **Concurrent cross-integrity mutex contention is unproven** (see the elevated-apply note below):
+  the ACL and mechanism are sound; a real unelevated-holds-while-elevated-opens race was not staged.
+
 ## SETUP — the elevated steps (need a UAC click; batched here on purpose)
 
 Everything above works unelevated. These two need one elevation each — run them yourself:
@@ -87,8 +100,11 @@ Everything above works unelevated. These two need one elevation each — run the
   round-trip. Unelevated apply also verified with a real Modrinth upgrade.
 - **Elevated apply — FULLY VERIFIED end-to-end (2026-07-22), including a successful install.**
   Ran a real **machine-scope winget install** (iCUE) through the widget flow: `apply.ps1` → RunAs
-  (accepted) → `apply-elevated.ps1` → `Invoke-WithWingetLock` (**cross-integrity mutex held in the
-  elevated helper**) → `Invoke-WingetApply` → **winget exit 0** → `STATUS … done` → `DONE 0`. Also
+  (accepted) → `apply-elevated.ps1` → `Invoke-WithWingetLock` (mutex acquired + released in the
+  elevated helper; the Everyone-FullControl ACL for cross-integrity access is in place and the
+  mechanism is sound — but the *concurrent* contention it guards, unelevated checker holding while
+  the elevated apply opens, was not directly staged) → `Invoke-WingetApply` → **winget exit 0** →
+  `STATUS … done` → `DONE 0`. Also
   verified: the **failure path** (an already-current Defender WU item → `failed exit=1` + clean
   `DONE`, no hang) and the **suspectStale auto-flag** (after the successful iCUE apply, the next
   check re-flagged iCUE as already-current — its ARP version lags — and dropped it from the count).
