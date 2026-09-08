@@ -1,185 +1,196 @@
-![Screenshot of overline-zebar in use with GlazeWM, previewing multiple themes and rounded settings](https://github.com/user-attachments/assets/08b4be9a-e405-4217-814b-aac7acd6e0f5)
+<div align="center">
 
-# overline-zebar
+# overline-zebar — personal build
 
-A fully featured, highly customizable widget pack for [Zebar](https://github.com/glzr-io/zebar). Works in tandem with GlazeWM, perfect for making Windows look great 🌠
+**A Windows top bar built on [Zebar](https://github.com/glzr-io/zebar): three transparent islands, a live system-metrics panel, and a pamac-style update centre for scoop, winget and Windows Update.**
 
-<img width="2124" height="437" alt="System stats widget, hovering from the main widget" src="https://github.com/user-attachments/assets/2846a6ec-8268-4fc0-bed4-1ff6bdb4df55" />
-<img width="1145" height="785" alt="Config widget window, centered on the screen" src="https://github.com/user-attachments/assets/e7536236-3e15-4066-b996-b90eb4f183d7" />
+![Zebar 3.1.1](https://img.shields.io/badge/Zebar-3.1.1_(pinned)-8b5cf6)
+![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript 5.7](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS 3](https://img.shields.io/badge/Tailwind_CSS-3-38B2AC?logo=tailwind-css&logoColor=white)
+![PowerShell 7](https://img.shields.io/badge/PowerShell-7-5391FE?logo=powershell&logoColor=white)
+![Windows 11](https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white)
 
-To install: [Installation](#installation)
+</div>
 
-## About The Project
+![The bar](docs/screenshots/bar.png)
 
-This repository is a monorepo containing multiple widgets and packages that work together to provide a seamless and feature-rich experience for Zebar.
+---
 
-### Project Structure
+> **This is a personal fork of [mushfikurr/overline-zebar](https://github.com/mushfikurr/overline-zebar).**
+> The widget-pack architecture — the monorepo, the shared `config`/`ui`/`tailwind` packages, the
+> `main`, `system-stats`, `config-widget` and `script-launcher` widgets — is upstream's work.
+> This branch adds five widgets, a PowerShell update engine, and a rebuilt bar layout.
+>
+> **Upstream carries no license, so this fork adds none.** See [Credits](#credits).
+>
+> Everything here is built against **Zebar 3.1.1**, deliberately pinned — see [Build](#build).
 
-The project is organized into two main directories:
+---
 
-- `packages/`: Contains shared code and components used across different widgets.
-  - `config`: Manages configuration for all widgets.
-  - `ui`: A component library with shared React components.
-  - `tailwind`: Shared Tailwind CSS configuration.
-  - `typescript`: Shared TypeScript configuration.
-- `widgets/`: Contains the individual widgets that can be used with Zebar.
-  - `main`: The main topbar widget.
-  - `system-stats`: A widget to display system statistics.
-  - `config-widget`: A graphical user interface to configure all widgets.
-  - `script-launcher`: A widget to quickly launch custom scripts.
+## What this fork adds
 
-## Features
+| Addition | What it does |
+| --- | --- |
+| **`update-panel`** + `engine/` | A ~700-line PowerShell update engine and its modal. Enumerates **scoop**, **winget** and **Windows Update**, then applies updates individually, per channel, or all at once. |
+| **`stats-graph`** | Five-minute sparkline history for eight metrics, sampled by the bar into `localStorage`. |
+| **`calendar`** | Month view with a live weather header. |
+| **`forecast`** | Seven-day forecast from [Open-Meteo](https://open-meteo.com/), for an IP-geolocated location. |
+| **`power`** | Lock / sleep / restart / shut down, with confirmation on the destructive actions. |
+| Rebuilt **`main`** bar | Three transparent rounded islands; an expanded stats readout with CPU/GPU temperatures; uptime; full system tray; GlazeWM-dependent widgets removed. |
 
-### Main Widget
+## The bar
 
-The main widget is a topbar that provides a variety of features:
+Three independent islands over a transparent bar, so the wallpaper shows through.
 
-- **Media Controls**: Play/pause, skip tracks, and cycle through media sessions.
-- **Workspace Display**: View and switch between workspaces, with an option for dynamic workspace names.
-- **System Tray**: Interact with system tray icons, with the ability to pin icons.
-- **Search and Tiling Direction Controls**: Quickly access your launcher and toggle tiling direction.
-- **Volume Control**: Adjust volume, mute/unmute, and open a volume slider.
-- **Current Window Display**: View the current window title and access window controls.
-- **System Stats**: A summary of CPU, RAM, and weather information, which opens the `system-stats` widget on click.
-- **Date/Time**: Displays the current date and time, and opens the `config-widget` on click.
+**Left** — system metrics, the auto-hiding update island, and media:
 
-### System-Stats Widget
+![Left island](docs/screenshots/bar-left.png)
 
-This widget provides a detailed view of your system's statistics, including:
+**Centre** — time, date and current conditions. Clicking opens the calendar; clicking the weather opens the forecast:
 
-- **Host Information**: OS, hostname, uptime, and battery information.
-- **Storage**: A list of all connected drives with their usage.
-- **Performance**: CPU and memory usage details.
-- **Network**: Detailed information about network interfaces, traffic, and addresses.
+![Centre island](docs/screenshots/bar-center.png)
 
-### Config Widget
+**Right** — uptime, volume, the full system tray, and the power menu:
 
-A comprehensive GUI for configuring all aspects of the widgets, from appearance to functionality. See the [Configuration](#configuration) section for more details.
+![Right island](docs/screenshots/bar-right.png)
 
-### Script-Launcher Widget
+CPU/GPU load, temperatures and disk figures come from
+[LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)'s local web
+server — Zebar exposes neither GPU nor temperature data on its own.
 
-A simple but powerful widget that allows you to define and quickly run custom shell commands or scripts. Access the main **config-widget** by clicking the settings (gear) icon in the bottom right.
+## Panels
 
-## Installation
+Every island opens a panel below it. They close on blur or <kbd>Esc</kbd>.
 
-### Option 1: The Zebar Marketplace (Recommended)
+| Update centre | System graphs |
+| --- | --- |
+| [![Update panel](docs/screenshots/update-panel.png)](docs/screenshots/update-panel.png) | [![System graphs](docs/screenshots/stats-graph.png)](docs/screenshots/stats-graph.png) |
 
-1.  Right-click the Zebar tray icon, and click **Browse Widgets**.
-2.  Search for **"overline-zebar"**.
-3.  Click **Install**.
-4.  Continue to the [Configuration](#configuration) section.
+| Calendar | Forecast | Power |
+| --- | --- | --- |
+| [![Calendar](docs/screenshots/calendar.png)](docs/screenshots/calendar.png) | [![Forecast](docs/screenshots/forecast.png)](docs/screenshots/forecast.png) | [![Power menu](docs/screenshots/power.png)](docs/screenshots/power.png) |
 
-### Option 2: Build from Source
+## The update island
 
-Choose this option if you want to customize the widget's functionality, modify the source code, or contribute to the development.
+The headline feature, and the bulk of this fork. An island appears on the bar showing
+`N updates` with a per-channel icon, **auto-hiding entirely when there is nothing to do**.
+Clicking it opens the modal above: update everything, a whole channel, or one package;
+hide a package or skip a single version, with undo.
 
-**Prerequisites:**
+**A scheduled task refreshes it every 45 minutes**, so the count is current without anyone
+asking for it.
 
-- [Node.js](https://nodejs.org/) (v16 or newer)
-- [pnpm](https://pnpm.io/)
-- [Git](https://git-scm.com/)
+### Engine
 
-**Steps:**
+`engine/` is dependency-free PowerShell 7 — no Pester, no modules to install.
 
-1.  Clone the repository to your local machine inside the `.glzr` directory (e.g., `C:/Users/<USER>/.glzr/zebar` on Windows):
+| Script | Role |
+| --- | --- |
+| `UpdateEngine.psm1` | Parsers, mutex, apply, desktop-icon sweep, last-apply bookkeeping |
+| `check.ps1` | Enumerate all channels → `status.json` (scheduled, and "Check now") |
+| `apply.ps1` | Apply updates: `-All` / `-Channel` / `-Ids`, with `-WhatIf` |
+| `apply-elevated.ps1` | Elevated helper for machine-scope winget and Windows Update |
+| `ignore.ps1` | Hide a package or skip a version, and un-hide |
+| `deploy.ps1` | Copy the engine to `%LOCALAPPDATA%`, hardening the elevated helper's ACL |
+| `install-task.ps1` | Register the scheduled checker |
 
-    ```sh
-    git clone https://github.com/mushfikurr/overline-zebar.git
-    cd overline-zebar
-    ```
+Runtime state lives in `%LOCALAPPDATA%\overline-updates\`.
 
-2.  Install all required dependencies using pnpm:
+### Design properties worth knowing
 
-    ```sh
-    pnpm install
-    ```
+- **All winget access is serialised** behind a named mutex (`Global\OverlineWingetLock`), ACL'd so
+  an elevated helper and the unelevated checker can share it. Two winget processes at once is a
+  reliable way to corrupt a package operation.
+- **`status.json` is written atomically** (temp file + rename), so a half-written file can never be
+  read by the widget.
+- **Expensive checks are throttled**, with the last good result carried forward so the count never
+  blinks to zero: scoop bucket refresh every ~3 h, the Windows Update COM search every ~4 h.
+- **One UAC prompt per batch.** Elevated work is bundled into a single `RunAs` of a fixed script
+  driven by a data-only job file — never a command string.
+- **The action layer passes arguments as an argv array**, never an interpolated shell string, so a
+  package name can't inject a command.
+- **Declining the UAC prompt writes a completion sentinel** rather than hanging the modal.
 
-3.  Build the project for production:
+### Tests
 
-    ```sh
-    pnpm --filter "@overline-zebar/*" build
-    ```
-
-    This creates a `dist` folder in each widget's directory, containing the compiled widget ready for use.
-
-4.  See the [Configuration](#configuration) section below for details on how to customize the widgets.
-
-## Configuration
-
-`overline-zebar` is highly configurable through the **config-widget**. To open it, click on the left-most button (Script Launcher), and then the "Gear Icon".
-
-### (!) For Zebar specific settings
-
-To configure zebar specific settings when downloading from marketplace, you must copy the downloaded widget from:
-
-`%appdata%/zebar/downloads` -> `C:/Users/<username>/.glzr/zebar/`
-
-This will save the widget to a custom pack. You will now be able to configure the widget through the `zpack.json` file.
-
-The config-widget itself provides a user-friendly interface to manage internal widget settings. Keep in mind it is not 1:1 with the Zebar settings.
-
-Here's a breakdown of the available options:
-
-### General
-
-- **Enable Auto Tiling**: Automatically changes the tiling direction when a window reaches half its size.
-- **Zebar WebSocket URI**: The address where Zebar listens for events from GlazeWM.
-
-### Appearance
-
-- **Border Radius**: Adjust the roundness of elements.
-- **Theme**: Choose from a list of preset themes (including Catppuccin variants) or generate your own from a single color. The theme generator creates a rich, varied palette with distinct shades and high-contrast, tinted text, ensuring both readability and a unique aesthetic. The theme editor allows you to:
-  - Select, add, and delete themes.
-  - Customize every color in the theme with a color picker and eye-dropper.
-  - Preview changes in real-time.
-
-### Config Management
-
-- **Export Configuration**: Download your current settings as a JSON file.
-- **Import Configuration**: Load settings from a JSON file.
-- **Reset Configuration**: Restore all settings to their default values.
-
-### Widget Specific > Main (Topbar)
-
-#### General
-
-- **Launcher Path**: The file path to your preferred application launcher (e.g., Flow Launcher, PowerToys Run).
-- **Allow Dynamic Workspace Indicators**: If enabled, workspace indicators will be named after the first opened window in that workspace.
-- **Horizontal Margin**: Adds space to the left and right of the topbar for a "floating" look.
-- **Left/Right Padding**: Adjusts the inner spacing on the left and right ends of the topbar independently.
-- **Media Max Width**: Sets the maximum width for the media display.
-
-#### Stats
-
-- **Providers**: Enable or disable individual system stat providers (CPU, Memory, Weather).
-- **Toggle Fahrenheit**: Switch between Celsius and Fahrenheit for the weather display.
-- **Thresholds**: Customize the display colors for different temperature ranges. By default, there are four configurable thresholds, each with a minimum and maximum temperature value. The available colors (Danger, Warning, and Text) are derived from your chosen theme.
-
-#### System Tray
-
-- **Pinned Icons**: Select which icons should remain visible when the system tray is collapsed. You can toggle the collapsed state by Shift-clicking the system tray icons.
-
-### Widget Specific > Script Launcher
-
-- **Accessing Configuration**: Open the main **config-widget** by clicking the settings (gear) icon in the bottom right of the script launcher.
-- **Scripts**: Add, edit, and remove custom scripts. Each script has a name (which is displayed in the widget) and a shell command to be executed.
-
-## Development
-
-To see live changes during development, follow the steps to build from source:
-
-```sh
-pnpm run build
+```powershell
+pwsh -NoProfile -File engine/_test/run-tests.ps1
 ```
 
-This command will build all monorepo packages and widgets. To work on a specific widget, run:
+A dependency-free assert harness covering the winget/scoop/Windows Update parsers, the
+ignore/stale/interactive merge, atomic IO, and the apply layer.
 
-```sh
-pnpm run build:watch --filter <widget-name>
+### Known limitation
+
+Every winget item is currently treated as `scope='machine'`, so *every* winget update routes
+through the elevated helper and raises a UAC prompt — including genuinely user-scope packages.
+Mostly that is a redundant prompt, but some user-scope packages misbehave under elevation.
+Refining scope detection is the highest-value improvement here.
+
+## Project layout
+
+```
+packages/          shared config, UI components, Tailwind and TS config   (upstream)
+widgets/
+  main             the bar itself                                        (rebuilt)
+  system-stats     hover panel                                           (upstream)
+  config-widget    settings GUI                                          (upstream)
+  script-launcher  quick script launcher                                 (upstream)
+  update-panel     update centre modal                                   (added)
+  stats-graph      5-minute metric history                               (added)
+  calendar         month view + weather header                           (added)
+  forecast         7-day Open-Meteo forecast                             (added)
+  power            power menu                                            (added)
+engine/            PowerShell update engine + tests                       (added)
+docs/              design spec and implementation plan for the update island
 ```
 
-This will start the development server for all widgets with hot reloading. Zebar will automatically restart on save if the widget is selected.
+## Build
 
-## Contributions
+> **Do not build against Zebar 3.3.x.** This tree targets the **3.1.1** runtime; the newer provider
+> calls fail silently against it. The pnpm catalog pins `zebar: '3.1.1'` exactly — a `^3.1.0` range
+> would resolve to 3.3.1.
 
-Pull requests are welcome. If you find any issues or have feature suggestions, feel free to open an issue on GitHub.
+```bash
+npm i -g pnpm@9.15.0     # or: corepack pnpm@9.15.0
+pnpm install
+pnpm build
+```
+
+The postbuild hook kills and restarts `zebar.exe` — that is expected, not an error.
+
+### Deploy
+
+Copy each widget's `dist/` over the installed pack, **keeping the pack directory name identical**:
+
+```
+%APPDATA%\zebar\downloads\mushfikurr.overline-zebar@1.0.3\widgets\<widget>\dist
+```
+
+The name matters: the active theme lives in `localStorage`, which is keyed by pack name, so
+renaming the pack silently loses the theme. Then deploy the engine and register the checker:
+
+```powershell
+pwsh -NoProfile -File engine/deploy.ps1
+pwsh -NoProfile -File engine/install-task.ps1
+```
+
+## Theming
+
+Themes are stored in `localStorage` under `overline-zebar-config`, **not** in the source, so they
+survive every rebuild. The build shown here uses a pure-black OLED theme
+(`--background: #000000`) with muted grey text.
+
+## Credits
+
+Built on **[mushfikurr/overline-zebar](https://github.com/mushfikurr/overline-zebar)** — the widget
+pack, shared packages and original bar are their work, and the upstream README documents the
+architecture and the widget-authoring workflow in `widgets/README.md`.
+
+Upstream publishes **no license**, so no license is asserted here either; this fork inherits that
+position. If you want to reuse anything from it, ask upstream first.
+
+Also uses [Zebar](https://github.com/glzr-io/zebar) (glzr-io),
+[LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor),
+[Open-Meteo](https://open-meteo.com/) and [Lucide](https://lucide.dev/) icons.

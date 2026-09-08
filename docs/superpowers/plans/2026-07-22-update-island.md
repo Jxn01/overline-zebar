@@ -11,9 +11,9 @@
 ## Global Constraints
 
 - **Zebar pinned to 3.1.1** — build commit `e8e2ded` (branch `build-zebar-3.1.1`), pnpm catalog `zebar:` = `'3.1.1'`. Never bump to 3.3.x. (from `zebar-overline-build` memory)
-- **Windows account is `jxn`** (`JXN-WINDOWS\jxn`), profile folder `C:\Users\jxnpe`. Use `jxn` for scheduled tasks/ACLs — `jxnpe` fails SID mapping.
-- **Engine root:** `%LOCALAPPDATA%\overline-updates\` → `C:\Users\jxnpe\AppData\Local\overline-updates\`. Scripts under `engine\`, data files at the root.
-- **Repo engine source:** `engine/` at repo root (`C:\Users\jxnpe\Projects\overline-zebar\engine\`); deployed by copy to the LOCALAPPDATA engine dir.
+- **The Windows account name can differ from the profile folder name.** Always use the *account* name (`$env:USERNAME`) for scheduled tasks and ACLs — passing a profile-folder name that is not a real account fails with "No mapping between account names and security IDs was done".
+- **Engine root:** `%LOCALAPPDATA%\overline-updates\`. Scripts under `engine\`, data files at the root.
+- **Repo engine source:** `engine/` at the repo root; deployed by copy to the LOCALAPPDATA engine dir.
 - **All winget access serialized** behind a named mutex `Global\OverlineWingetLock`.
 - **status.json / last-apply.json written atomically** (temp + rename).
 - **Elevated helper** = fixed script + data-only job file, run as interactive user with highest privileges (NOT SYSTEM). One UAC per user-initiated batch.
@@ -152,10 +152,10 @@ Assert-Equal $m.channel 'winget' 'winget: sets channel'
 
 **Files:** Create `engine/install-task.ps1`, `engine/deploy.ps1`.
 
-**Interfaces:** `deploy.ps1` copies `engine/*` → `%LOCALAPPDATA%\overline-updates\engine\` (ACL: remove inherited write for non-admins on `apply-elevated.ps1`). `install-task.ps1` registers `overline-update-check` (per-user `jxn`, trigger: logon + every 45 min; action: `pwsh -NoProfile -WindowStyle Hidden -File …\engine\check.ps1`; `scoop update` bucket-refresh folded into check on a 6-run counter).
+**Interfaces:** `deploy.ps1` copies `engine/*` → `%LOCALAPPDATA%\overline-updates\engine\` (ACL: remove inherited write for non-admins on `apply-elevated.ps1`). `install-task.ps1` registers `overline-update-check` (per-user, trigger: logon + every 45 min; action: `pwsh -NoProfile -WindowStyle Hidden -File …\engine\check.ps1`; `scoop update` bucket-refresh folded into check on a 6-run counter).
 
 - [ ] **Step 1:** Write `deploy.ps1` (copy + `icacls` hardening of `apply-elevated.ps1`).
-- [ ] **Step 2:** Write `install-task.ps1` using `Register-ScheduledTask` (principal `JXN-WINDOWS\jxn`, `RunLevel Limited`).
+- [ ] **Step 2:** Write `install-task.ps1` using `Register-ScheduledTask` (principal `$env:USERDOMAIN\$env:USERNAME`, `RunLevel Limited`).
 - [ ] **Step 3:** Run both; `Get-ScheduledTask overline-update-check` shows Ready; `Start-ScheduledTask` then confirm `status.json` refreshes.
 - [ ] **Step 4: Commit** `feat(update-island): deploy + scheduled checker`.
 

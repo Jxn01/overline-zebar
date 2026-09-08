@@ -73,7 +73,7 @@ Everything above works unelevated. These two need one elevation each — run the
    # from an ELEVATED pwsh:
    pwsh -File "$env:LOCALAPPDATA\overline-updates\engine\install-task.ps1"
    ```
-   Registers `overline-update-check` for `JXN-WINDOWS\jxn` (Limited), at logon + every 45 min.
+   Registers `overline-update-check` for the current user (Limited), at logon + every 45 min.
 
 2. **First elevated apply is UAC-gated by design.** Clicking "Update everything" or updating a
    machine-scope winget / Windows Update item launches `apply-elevated.ps1` via `Start-Process
@@ -109,7 +109,7 @@ Everything above works unelevated. These two need one elevation each — run the
   `DONE`, no hang) and the **suspectStale auto-flag** (after the successful iCUE apply, the next
   check re-flagged iCUE as already-current — its ARP version lags — and dropped it from the count).
 - **Scheduled task — VERIFIED (2026-07-22).** `install-task.ps1` registered `overline-update-check`
-  (Ready, Limited, user `jxn`, logon + 45 min); `Start-ScheduledTask` ran it (`LastTaskResult 0x0`)
+  (Ready, Limited, current user, logon + 45 min); `Start-ScheduledTask` ran it (`LastTaskResult 0x0`)
   and it refreshed `status.json`. The island now auto-refreshes.
 - **Only thing never clicked through the UI:** the button/island interactions themselves (their
   exact underlying commands ARE verified). Low risk, proven patterns.
