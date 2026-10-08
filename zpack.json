@@ -39,15 +39,15 @@
         "shellCommands": [
           {
             "program": "shutdown",
-            "argsRegex": ".*"
+            "argsRegex": "^/[as]$"
           },
           {
             "program": "explorer",
-            "argsRegex": ".*"
+            "argsRegex": "^ms-settings:network-status$"
           },
           {
             "program": "cmd",
-            "argsRegex": ".*overline-updates.*"
+            "argsRegex": "^/c type %LOCALAPPDATA%\\\\overline-updates\\\\status\\.json$"
           }
         ]
       },
@@ -134,7 +134,7 @@
         "shellCommands": [
           {
             "program": "shutdown",
-            "argsRegex": ".*"
+            "argsRegex": "^/[sra]( /t [0-9]{1,5})?$"
           }
         ]
       },
@@ -298,11 +298,11 @@
         "shellCommands": [
           {
             "program": "cmd",
-            "argsRegex": ".*(LOCALAPPDATA|overline-updates).*"
+            "argsRegex": "^/c (echo %LOCALAPPDATA%|type [A-Za-z]:\\\\Users\\\\[A-Za-z0-9_][A-Za-z0-9_ .-]*\\\\AppData\\\\Local\\\\overline-updates\\\\(status\\.json|ignore\\.json|run-[a-z0-9]{1,10}\\.log))$"
           },
           {
             "program": "pwsh",
-            "argsRegex": ".*overline-updates.*"
+            "argsRegex": "^-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File [A-Za-z]:\\\\Users\\\\[A-Za-z0-9_][A-Za-z0-9_ .-]*\\\\AppData\\\\Local\\\\overline-updates\\\\engine\\\\(apply|check|ignore)\\.ps1( .*)?$"
           }
         ]
       },
@@ -346,15 +346,15 @@
         "shellCommands": [
           {
             "program": "shutdown",
-            "argsRegex": ".*"
+            "argsRegex": "^/[sr] /t 0$"
           },
           {
             "program": "rundll32",
-            "argsRegex": ".*user32\\.dll,LockWorkStation.*"
+            "argsRegex": "^user32\\.dll,LockWorkStation$"
           },
           {
             "program": "pwsh",
-            "argsRegex": ".*SetSuspendState\\('Suspend'.*"
+            "argsRegex": "^-NoProfile -NonInteractive -Command Add-Type -AssemblyName System\\.Windows\\.Forms; \\[void\\]\\[System\\.Windows\\.Forms\\.Application\\]::SetSuspendState\\('Suspend', \\$false, \\$false\\)$"
           }
         ]
       },

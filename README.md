@@ -120,7 +120,32 @@ pwsh -NoProfile -File engine/_test/run-tests.ps1
 ```
 
 A dependency-free assert harness covering the winget/scoop/Windows Update parsers, the
-ignore/stale/interactive merge, atomic IO, and the apply layer.
+ignore/stale/interactive merge, atomic IO, the apply layer, and the widgets' shell privileges
+(`zpack-privileges.tests.ps1`, below).
+
+### Shell privileges
+
+Zebar 3.1.1 joins a shell call's arguments with spaces and tests them against the widget's
+`argsRegex` with an **unanchored** match, so `".*overline-updates.*"` admitted any `cmd` command
+that merely contained that word. Every widget's privileges are therefore defined once, in
+`engine/zpack-privileges.psd1`, as `^…$` patterns describing exactly what the widget sends (`cmd`
+patterns also exclude cmd's metacharacters). `engine/set-zpack-privileges.ps1` writes them into
+`zpack.json` (`-Installed`: the installed pack's too). The test fails if any pattern in either
+`zpack.json` is unanchored or differs from the `.psd1`, if a widget not listed there gains a
+privilege, if a real call site's arguments stop matching, or if an injection variant matches; a
+positive control proves the old unanchored form admits those injections.
+
+| Widget | Program | Admits |
+| --- | --- | --- |
+| `main` | `shutdown` | `/a`, `/s` |
+| `main` | `explorer` | `ms-settings:network-status` |
+| `main` | `cmd` | `/c type %LOCALAPPDATA%\overline-updates\status.json` |
+| `script-launcher` | `shutdown` | `/s`, `/r`, `/a`, optionally `/t <n>` |
+| `update-panel` | `cmd` | `/c echo %LOCALAPPDATA%`; `/c type` of `status.json`, `ignore.json` or `run-<id>.log` under `%LOCALAPPDATA%\overline-updates` |
+| `update-panel` | `pwsh` | `-File` of `engine\apply.ps1`, `check.ps1` or `ignore.ps1` under `%LOCALAPPDATA%\overline-updates` (script arguments are passed to the script, never interpreted by pwsh) |
+| `power` | `shutdown` | `/s /t 0`, `/r /t 0` |
+| `power` | `rundll32` | `user32.dll,LockWorkStation` |
+| `power` | `pwsh` | the one `SetSuspendState('Suspend', $false, $false)` command |
 
 ### Known limitation
 
@@ -174,10 +199,11 @@ Copy each widget's `dist/` over the installed pack, **keeping the pack directory
 ```
 
 The name matters: the active theme lives in `localStorage`, which is keyed by pack name, so
-renaming the pack silently loses the theme. A change to a widget's **privileges** must also be made
-in the installed pack's `zpack.json` (patch the widget's entry — the installed file has local preset
-values, so do not overwrite it wholesale) and needs a Zebar restart. Then deploy the engine and
-register the checker:
+renaming the pack silently loses the theme. A change to a widget's **privileges** must also reach
+the installed pack's `zpack.json`, which holds local preset values and must not be overwritten
+wholesale: edit `engine/zpack-privileges.psd1`, run `pwsh -File engine/set-zpack-privileges.ps1
+-Installed` (it replaces only each widget's `shellCommands`), and restart Zebar. Then deploy the
+engine and register the checker:
 
 ```powershell
 pwsh -NoProfile -File engine/deploy.ps1
