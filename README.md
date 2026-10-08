@@ -36,7 +36,8 @@
 | **`stats-graph`** | Five-minute sparkline history for eight metrics, sampled by the bar into `localStorage`. |
 | **`calendar`** | Month view with a live weather header. |
 | **`forecast`** | Seven-day forecast from [Open-Meteo](https://open-meteo.com/), for an IP-geolocated location. |
-| **`power`** | Lock / sleep / restart / shut down, with confirmation on the destructive actions. |
+| **`power`** | Lock / sleep / restart / shut down, with confirmation on the destructive actions. Sleep is real S3 sleep (`Application.SetSuspendState(Suspend)` via `pwsh`), never `rundll32 powrprof.dll,SetSuspendState`, which hibernates whenever hibernation is enabled. The widget's `rundll32` privilege only admits `LockWorkStation`, so that call cannot come back. |
+| **`helpers/start-menu-reveal`** | AutoHotkey v2 helper: while Start, Search or a shell flyout is in the foreground, the bar is raised `TOPMOST` over a fullscreen app (as the Windows taskbar is), then lowered again. See its [README](helpers/start-menu-reveal/README.md). |
 | Rebuilt **`main`** bar | Three transparent rounded islands; an expanded stats readout with CPU/GPU temperatures; uptime; full system tray; GlazeWM-dependent widgets removed. |
 
 ## The bar
@@ -143,6 +144,8 @@ widgets/
   forecast         7-day Open-Meteo forecast                             (added)
   power            power menu                                            (added)
 engine/            PowerShell update engine + tests                       (added)
+helpers/
+  start-menu-reveal  raise the bar over fullscreen apps while Start is open (added)
 docs/              design spec and implementation plan for the update island
 ```
 
@@ -158,7 +161,9 @@ pnpm install
 pnpm build
 ```
 
-The postbuild hook kills and restarts `zebar.exe` — that is expected, not an error.
+The postbuild hook kills and restarts `zebar.exe` — that is expected, not an error. The restarted
+Zebar inherits the build's output handles, so a build run from a script or agent shell that waits for
+its output **does not return until Zebar exits** — the build itself is long done (check `dist/`).
 
 ### Deploy
 
@@ -169,7 +174,10 @@ Copy each widget's `dist/` over the installed pack, **keeping the pack directory
 ```
 
 The name matters: the active theme lives in `localStorage`, which is keyed by pack name, so
-renaming the pack silently loses the theme. Then deploy the engine and register the checker:
+renaming the pack silently loses the theme. A change to a widget's **privileges** must also be made
+in the installed pack's `zpack.json` (patch the widget's entry — the installed file has local preset
+values, so do not overwrite it wholesale) and needs a Zebar restart. Then deploy the engine and
+register the checker:
 
 ```powershell
 pwsh -NoProfile -File engine/deploy.ps1

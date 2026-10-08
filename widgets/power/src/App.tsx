@@ -6,10 +6,12 @@ import { Lock, LogOut, Moon, Power, RotateCcw } from 'lucide-react';
 // command. Destructive actions (shutdown/restart) ask for confirmation first,
 // so a stray click can't end the session.
 //
-// NOTE on Sleep: `SetSuspendState 0,1,0` requests sleep, but Windows
-// HIBERNATES instead when hibernation is enabled (it is on this machine).
-// Forcing true sleep needs `powercfg /h off`, which also disables Fast
-// Startup — deliberately not done here.
+// NOTE on Sleep: `rundll32 powrprof.dll,SetSuspendState 0,1,0` is NOT sleep —
+// rundll32 passes the arguments wrongly, and Windows HIBERNATES whenever
+// hibernation is enabled (it is on this machine). A hibernated Windows leaves
+// its NTFS volumes, the shared drive included, unsafe for the Linux dual-boot.
+// So Sleep calls the real API through pwsh:
+// Application.SetSuspendState(Suspend, force=false, disableWakeEvent=false).
 type Action = {
   id: string;
   label: string;
@@ -30,14 +32,17 @@ const ACTIONS: Action[] = [
     confirm: false,
   },
   {
-    // Labelled honestly: hibernation is enabled on this machine, so Windows
-    // will hibernate rather than sleep. `powercfg /h off` would force true
-    // sleep but also disables Fast Startup — deliberately not done.
+    // True S3 sleep, never hibernate — see the note at the top.
     id: 'sleep',
-    label: 'Sleep / Hibernate',
+    label: 'Sleep',
     Icon: Moon,
-    program: 'rundll32',
-    args: ['powrprof.dll,SetSuspendState', '0,1,0'],
+    program: 'pwsh',
+    args: [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      "Add-Type -AssemblyName System.Windows.Forms; [void][System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false)",
+    ],
     confirm: false,
   },
   {

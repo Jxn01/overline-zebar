@@ -350,7 +350,11 @@
           },
           {
             "program": "rundll32",
-            "argsRegex": ".*"
+            "argsRegex": ".*user32\\.dll,LockWorkStation.*"
+          },
+          {
+            "program": "pwsh",
+            "argsRegex": ".*SetSuspendState\\('Suspend'.*"
           }
         ]
       },
