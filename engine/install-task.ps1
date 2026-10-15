@@ -34,7 +34,9 @@ $conhost = "$env:SystemRoot\System32\conhost.exe"
 $action = New-ScheduledTaskAction -Execute $conhost -Argument "--headless `"$pwsh`" -NoProfile -File `"$checkPath`""
 $tLogon = New-ScheduledTaskTrigger -AtLogOn
 $tRepeat = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 45)
-$principal = New-ScheduledTaskPrincipal -UserId "$($env:USERDOMAIN)\$($env:USERNAME)" -LogonType Interactive -RunLevel Limited
+# The real account name, not %USERDOMAIN%\%USERNAME%: in an SSH logon on a workgroup PC that reads WORKGROUP\<user>
+# and Register-ScheduledTask fails with "No mapping between account names and security IDs" (2026-10-15).
+$principal = New-ScheduledTaskPrincipal -UserId ([Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger @($tLogon, $tRepeat) -Principal $principal -Settings $settings -Force | Out-Null
