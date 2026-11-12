@@ -5,9 +5,6 @@ A pamac-style update notifier for the overline-zebar bar. An auto-hiding **islan
 channel / individual items, with hide-ignore + undo, live progress, and a desktop-icon sweep.
 Channels: **scoop**, **winget**, **Windows Update**.
 
-Design: `docs/superpowers/specs/2026-07-22-update-island-design.md`
-Plan: `docs/superpowers/plans/2026-07-22-update-island.md`
-
 ## Layout
 
 ```
@@ -85,31 +82,7 @@ Everything above works unelevated. These two need one elevation each — run the
    #   tail %LOCALAPPDATA%\overline-updates\run-test.log — expect STATUS ... then DONE <code>.
    ```
 
-## Status (2026-07-22)
+## Status
 
-- **Engine (Phase 1) — DONE, fully tested + live-verified.** All parsers, cross-integrity mutex,
-  atomic writes, WU throttle, and the apply engine (unelevated verified with a real Modrinth
-  upgrade; elevated helper code complete). `run-tests.ps1` is green.
-- **Island (Phase 2) — DONE, live-verified.** CDP screenshot confirmed it shows the real count on
-  the bar and auto-hides at zero.
-- **Modal (Phase 3-4) — render + action-layer verified.** CDP-verified rendering channels /
-  items / drivers / hidden with correct badges. The action layer passes ids/versions as an argv
-  **array** (never a shell string — no command injection), invoking `pwsh -File <abs> <args>`.
-  Each action verified by running the widget's exact deployed script + args: `check.ps1` advances
-  `status.json`; `apply.ps1 -Ids …` writes a `DONE`-terminated run-log; `ignore.ps1` skip/unhide
-  round-trip. Unelevated apply also verified with a real Modrinth upgrade.
-- **Elevated apply — FULLY VERIFIED end-to-end (2026-07-22), including a successful install.**
-  Ran a real **machine-scope winget install** (iCUE) through the widget flow: `apply.ps1` → RunAs
-  (accepted) → `apply-elevated.ps1` → `Invoke-WithWingetLock` (mutex acquired + released in the
-  elevated helper; the Everyone-FullControl ACL for cross-integrity access is in place and the
-  mechanism is sound — but the *concurrent* contention it guards, unelevated checker holding while
-  the elevated apply opens, was not directly staged) → `Invoke-WingetApply` → **winget exit 0** →
-  `STATUS … done` → `DONE 0`. Also
-  verified: the **failure path** (an already-current Defender WU item → `failed exit=1` + clean
-  `DONE`, no hang) and the **suspectStale auto-flag** (after the successful iCUE apply, the next
-  check re-flagged iCUE as already-current — its ARP version lags — and dropped it from the count).
-- **Scheduled task — VERIFIED (2026-07-22).** `install-task.ps1` registered `overline-update-check`
-  (Ready, Limited, current user, logon + 45 min); `Start-ScheduledTask` ran it (`LastTaskResult 0x0`)
-  and it refreshed `status.json`. The island now auto-refreshes.
-- **Only thing never clicked through the UI:** the button/island interactions themselves (their
-  exact underlying commands ARE verified). Low risk, proven patterns.
+In daily use. The engine's parsers, locking, atomic writes and apply paths are covered by `run-tests.ps1`;
+the widget's actions run exactly the deployed scripts with arguments passed as an array (never a shell string).

@@ -17,7 +17,7 @@ $pwsh = (Get-Command pwsh).Source
 # itself and ignores SW_HIDE. The result was a console flashing on screen every 45
 # minutes, stealing focus out of fullscreen games.
 #
-# Measured 2026-09-08 by registering each form and enumerating new top-level windows:
+# Measured by registering each form and enumerating new top-level windows:
 #   pwsh -WindowStyle Hidden ....... 1 new window (WindowsTerminal 1199x616) + OpenConsole
 #   conhost --headless pwsh ........ 0 new windows, payload + git/scoop/winget children OK
 #
@@ -35,7 +35,7 @@ $action = New-ScheduledTaskAction -Execute $conhost -Argument "--headless `"$pws
 $tLogon = New-ScheduledTaskTrigger -AtLogOn
 $tRepeat = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 45)
 # The real account name, not %USERDOMAIN%\%USERNAME%: in an SSH logon on a workgroup PC that reads WORKGROUP\<user>
-# and Register-ScheduledTask fails with "No mapping between account names and security IDs" (2026-10-15).
+# and Register-ScheduledTask fails with "No mapping between account names and security IDs".
 $principal = New-ScheduledTaskPrincipal -UserId ([Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
 

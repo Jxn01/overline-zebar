@@ -171,7 +171,6 @@ widgets/
 engine/            PowerShell update engine + tests                       (added)
 helpers/
   start-menu-reveal  raise the bar over fullscreen apps while Start is open (added)
-docs/              design spec and implementation plan for the update island
 ```
 
 ## Build

@@ -18,7 +18,7 @@ context, no polling). On every foreground change it reads the new foreground win
 | Process | Shell surface |
 |---|---|
 | `StartMenuExperienceHost.exe` | Start (older Windows 11 builds) |
-| `SearchHost.exe` | Start on build 26200 (measured 2026-10-08), and Search |
+| `SearchHost.exe` | Start on build 26200, and Search |
 | `ShellExperienceHost.exe` | notification centre, calendar flyout |
 | `ShellHost.exe` | quick settings on newer builds |
 

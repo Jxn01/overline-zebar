@@ -1,7 +1,7 @@
 # Guard: the scheduled checker is registered for the CURRENT user's real account name.
 # "$env:USERDOMAIN\$env:USERNAME" reads WORKGROUP\<user> in an SSH (network) logon on a workgroup PC, and
 # Register-ScheduledTask then fails with "No mapping between account names and security IDs was done"
-# (found 2026-10-15 deploying the engine to the laptop over SSH). WindowsIdentity gives MACHINE\user everywhere.
+# WindowsIdentity gives MACHINE\user everywhere.
 
 $installTask = Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\install-task.ps1') -Raw
 $code = ($installTask -split "`n" | Where-Object { $_ -notmatch '^\s*#' }) -join "`n"

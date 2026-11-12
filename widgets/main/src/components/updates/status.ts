@@ -1,5 +1,4 @@
-// Types mirror the engine's status.json (see engine/UpdateEngine.psm1 New-UpdateItem
-// and docs/superpowers/specs/2026-07-22-update-island-design.md §5). Kept in sync by hand.
+// Types mirror the engine's status.json (see engine/UpdateEngine.psm1 New-UpdateItem). Kept in sync by hand.
 
 export type Scope = 'user' | 'machine';
 export type Interactive = 'yes' | 'no' | 'unknown';
@@ -35,7 +34,7 @@ export interface UpdateStatus {
   channels: Record<ChannelKey, ChannelResult>;
 }
 
-// Actionable = not a suspected false-positive. Drivers ARE counted (decision 2026-07-22);
+// Actionable = not a suspected false-positive. Drivers ARE counted;
 // pinned/ignored items never reach status.json (the engine drops them at check time).
 export function isActionable(it: UpdateItem): boolean {
   return !it.suspectStale;

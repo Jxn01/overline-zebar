@@ -2,7 +2,7 @@
 #
 # One module, two callers: check.ps1 (scheduled, writes status.json) and apply.ps1
 # (user-initiated upgrades, elevating machine-scope winget + Windows Update through
-# apply-elevated.ps1). See docs/superpowers/specs/2026-07-22-update-island-design.md.
+# apply-elevated.ps1).
 #
 # An Item is a PSCustomObject with fields:
 #   channel, id, name, current, available, scope, interactive, driver, driverClass,
